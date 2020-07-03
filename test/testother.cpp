@@ -1760,20 +1760,19 @@ private:
         ASSERT_EQUALS("", errout.str());
     }
 
-    void checkGlobalVariableNotVolatile(void)
-    {
+    void checkGlobalVariableNotVolatile(void) {
         check("bool g_flag = false;\n"
-            "void USART0_RXC_vect(void)\n"
-            "{\n"
-            "    g_flag = true;\n"
-            "}");
+              "void USART0_RXC_vect(void)\n"
+              "{\n"
+              "    g_flag = true;\n"
+              "}");
         ASSERT_EQUALS("[test.cpp:4]: (style) Global variable 'g_flag' is used in interrupt service routine ('USART0_RXC_vect'). Declare it as 'volatile'\n", errout.str());
 
         check("volatile bool g_flag = false;\n"
-            "void USART0_RXC_vect(void)\n"
-            "{\n"
-            "    g_flag = true;\n"
-            "}");
+              "void USART0_RXC_vect(void)\n"
+              "{\n"
+              "    g_flag = true;\n"
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 

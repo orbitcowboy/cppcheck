@@ -1328,26 +1328,24 @@ void CheckOther::checkGlobalVariableNotVolatile()
 {
     if (!mSettings->isEnabled(Settings::STYLE) || mTokenizer->isC())
         return;
-        const SymbolDatabase* symbolDatabase = mTokenizer->getSymbolDatabase();
-        // check every function
-        for (const Scope* scope : symbolDatabase->functionScopes) {
-            const Function* function = scope->function;
-            // check only vectors
-            if (!function || function->name().rfind("_vect") == std::string::npos)
-                continue;
+    const SymbolDatabase* symbolDatabase = mTokenizer->getSymbolDatabase();
+    // check every function
+    for (const Scope* scope : symbolDatabase->functionScopes) {
+        const Function* function = scope->function;
+        // check only vectors
+        if (!function || function->name().rfind("_vect") == std::string::npos)
+            continue;
 
-            // check function body
-            for (const Token* tok = scope->bodyStart; tok != scope->bodyEnd; tok = tok->next())
-            {
-                if (!tok)
-                    continue;
-                const Variable* const var = tok->variable();
-                if (var && var->isGlobal() && !var->isVolatile())
-                {
-                    reportError(tok, Severity::style, "globalVarNotVolatile", "Global variable '" + var->name() + "' is used in interrupt service routine ('" + function->name() + "'). Declare it as 'volatile'", CWE(0U), false);
-                }
+        // check function body
+        for (const Token* tok = scope->bodyStart; tok != scope->bodyEnd; tok = tok->next()) {
+            if (!tok)
+                continue;
+            const Variable* const var = tok->variable();
+            if (var && var->isGlobal() && !var->isVolatile()) {
+                reportError(tok, Severity::style, "globalVarNotVolatile", "Global variable '" + var->name() + "' is used in interrupt service routine ('" + function->name() + "'). Declare it as 'volatile'", CWE(0U), false);
             }
         }
+    }
 }
 
 void CheckOther::checkConstVariable()
