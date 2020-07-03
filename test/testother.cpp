@@ -97,6 +97,7 @@ private:
         TEST_CASE(passedByValue_externC);
 
         TEST_CASE(constVariable);
+        TEST_CASE(checkGlobalVariableNotVolatile);
 
         TEST_CASE(switchRedundantAssignmentTest);
         TEST_CASE(switchRedundantOperationTest);
@@ -1759,7 +1760,25 @@ private:
         ASSERT_EQUALS("", errout.str());
     }
 
+    void checkGlobalVariableNotVolatile(void)
+    {
+        check("bool g_flag = false;\n"
+            "void USART0_RXC_vect(void)\n"
+            "{\n"
+            "    g_flag = true;\n"
+            "}");
+        ASSERT_EQUALS("[test.cpp:4]: (style) Global variable 'g_flag' is used in interrupt service routine ('USART0_RXC_vect'). Declare it as 'volatile'\n", errout.str());
+
+        check("volatile bool g_flag = false;\n"
+            "void USART0_RXC_vect(void)\n"
+            "{\n"
+            "    g_flag = true;\n"
+            "}");
+        ASSERT_EQUALS("", errout.str());
+    }
+
     void constVariable() {
+
         check("int f(std::vector<int> x) {\n"
               "    int& i = x[0];\n"
               "    return i;\n"
