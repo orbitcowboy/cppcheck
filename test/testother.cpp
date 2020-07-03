@@ -1761,18 +1761,22 @@ private:
     }
 
     void checkGlobalVariableNotVolatile(void) {
+
+        Settings settings;
+        settings.enforcedLang = Settings::C;
+
         check("bool g_flag = false;\n"
               "void USART0_RXC_vect(void)\n"
               "{\n"
               "    g_flag = true;\n"
-              "}");
+              "}", nullptr, false, false, true, false, &settings);
         ASSERT_EQUALS("[test.cpp:4]: (style) Global variable 'g_flag' is used in interrupt service routine ('USART0_RXC_vect'). Declare it as 'volatile'\n", errout.str());
 
         check("volatile bool g_flag = false;\n"
               "void USART0_RXC_vect(void)\n"
               "{\n"
               "    g_flag = true;\n"
-              "}");
+              "}", nullptr, false, false, true, false, &settings);
         ASSERT_EQUALS("", errout.str());
     }
 
