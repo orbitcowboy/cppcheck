@@ -1363,8 +1363,7 @@ void CheckOther::checkMissingFuncDefinition()
         if (!function)
             continue;
 
-        if (!function->hasBody())
-        {
+        if (!function->hasBody()) {
             reportError(nullptr, Severity::style, "missingFunctionDefinition", "This function was declared but never defined", CWE(0U), false);
         }
     }
