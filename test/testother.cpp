@@ -233,6 +233,7 @@ private:
         TEST_CASE(moveAndLambda);
         TEST_CASE(forwardAndUsed);
 
+        TEST_CASE(checkMissingPrototype);
         TEST_CASE(funcArgNamesDifferent);
         TEST_CASE(funcArgOrderDifferent);
         TEST_CASE(cpp11FunctionArgInit); // #7846 - "void foo(int declaration = {}) {"
@@ -8368,6 +8369,10 @@ private:
               "    T s = t;\n"
               "}");
         ASSERT_EQUALS("[test.cpp:4]: (warning) Access of forwarded variable 't'.\n", errout.str());
+    }
+
+    void checkMissingPrototype() {
+        check("int f(void) {return 42};\n");
     }
 
     void funcArgNamesDifferent() {

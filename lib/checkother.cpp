@@ -1346,6 +1346,30 @@ void CheckOther::checkGlobalVariableNotVolatile()
     }
 }
 
+void CheckOther::checkMissingFuncDefinition()
+{
+    const bool style = mSettings->isEnabled(Settings::STYLE);
+    const bool inconclusive = mSettings->inconclusive;
+    const bool warning = mSettings->isEnabled(Settings::WARNING);
+
+    if (!(warning || (style && inconclusive)) || mTokenizer->isCPP())
+        return;
+
+    const SymbolDatabase* symbolDatabase = mTokenizer->getSymbolDatabase();
+    // check every function
+    for (const Scope* scope : symbolDatabase->functionScopes) {
+        const Function* function = scope->function;
+
+        if (!function)
+            continue;
+
+        if (!function->hasBody())
+        {
+            reportError(nullptr, Severity::style, "missingFunctionDefinition", "This function was declared but never defined", CWE(0U), false);
+        }
+    }
+}
+
 void CheckOther::checkConstVariable()
 {
     if (!mSettings->isEnabled(Settings::STYLE) || mTokenizer->isC())
@@ -2862,7 +2886,6 @@ void CheckOther::accessMovedError(const Token *tok, const std::string &varname, 
     const ErrorPath errorPath = getErrorPath(tok, value, errmsg);
     reportError(errorPath, Severity::warning, errorId, errmsg, CWE672, inconclusive);
 }
-
 
 
 void CheckOther::checkFuncArgNamesDifferent()

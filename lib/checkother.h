@@ -86,6 +86,7 @@ public:
         checkOther.checkUnusedLabel();
         checkOther.checkEvaluationOrder();
         checkOther.checkFuncArgNamesDifferent();
+        checkOther.checkMissingFuncDefinition();
         checkOther.checkShadowVariables();
         checkOther.checkKnownArgument();
         checkOther.checkComparePointers();
@@ -212,6 +213,9 @@ public:
 
     /** @brief %Check if function declaration and definition argument names different */
     void checkFuncArgNamesDifferent();
+
+    /** @brief %Check if a function is locally defined and a prototype is missing */
+    void checkMissingFuncDefinition();
 
     /** @brief %Check for shadow variables. Less noisy than gcc/clang -Wshadow. */
     void checkShadowVariables();
