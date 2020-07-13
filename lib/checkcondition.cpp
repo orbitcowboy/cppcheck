@@ -452,7 +452,13 @@ void CheckCondition::duplicateCondition()
             continue;
 
         bool modified = false;
-        visitAstNodes(cond1, [&](const Token *tok3) {
+        visitAstNodes(cond1, [&](const Token* tok3) {
+            if (exprDependsOnThis(tok3)) {
+                if (isThisChanged(scope.classDef->next(), cond2, false, mSettings, mTokenizer->isCPP())) {
+                    modified = true;
+                    return ChildrenToVisit::done;
+                }
+            }
             if (tok3->varId() > 0 &&
                 isVariableChanged(scope.classDef->next(), cond2, tok3->varId(), false, mSettings, mTokenizer->isCPP())) {
                 modified = true;
@@ -1457,6 +1463,7 @@ void CheckCondition::alwaysTrueFalse()
 
             // don't warn when condition checks sizeof result
             bool hasSizeof = false;
+            bool hasNonNumber = false;
             tokens.push(tok);
             while (!tokens.empty()) {
                 const Token *tok2 = tokens.top();
@@ -1473,9 +1480,9 @@ void CheckCondition::alwaysTrueFalse()
                     tokens.push(tok2->astOperand1());
                     tokens.push(tok2->astOperand2());
                 } else
-                    break;
+                    hasNonNumber = true;
             }
-            if (tokens.empty() && hasSizeof)
+            if (!hasNonNumber && hasSizeof)
                 continue;
 
             alwaysTrueFalseError(tok, &tok->values().front());
