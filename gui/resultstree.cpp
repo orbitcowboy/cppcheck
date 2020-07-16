@@ -50,8 +50,8 @@
 #include "xmlreportv2.h"
 
 // These must match column headers given in ResultsTree::translate()
-static const unsigned int COLUMN_SINCE_DATE = 6;
-static const unsigned int COLUMN_TAGS       = 7;
+static const int COLUMN_SINCE_DATE = 6;
+static const int COLUMN_TAGS       = 7;
 
 static QString getFunction(QStandardItem *item)
 {
@@ -673,7 +673,8 @@ void ResultsTree::contextMenuEvent(QContextMenuEvent * e)
             connect(suppressCppcheckID, &QAction::triggered, this, &ResultsTree::suppressCppcheckID);
             connect(opencontainingfolder, SIGNAL(triggered()), this, SLOT(openContainingFolder()));
 
-            if (!mTags.isEmpty()) {
+            const ProjectFile *currentProject = ProjectFile::getActiveProject();
+            if (currentProject && !currentProject->getTags().isEmpty()) {
                 menu.addSeparator();
                 QMenu *tagMenu = menu.addMenu(tr("Tag"));
                 {
@@ -684,7 +685,7 @@ void ResultsTree::contextMenuEvent(QContextMenuEvent * e)
                     });
                 }
 
-                foreach (const QString tagstr, mTags) {
+                foreach (const QString tagstr, currentProject->getTags()) {
                     QAction *action = new QAction(tagstr, tagMenu);
                     tagMenu->addAction(action);
                     connect(action, &QAction::triggered, [=]() {
@@ -1059,16 +1060,27 @@ void ResultsTree::suppressCppcheckID()
         selectedWarnings.insert(item);
     }
 
+    bool changed = false;
     ProjectFile *projectFile = ProjectFile::getActiveProject();
     for (QStandardItem *item: selectedWarnings) {
         QStandardItem *fileItem = item->parent();
         const QVariantMap data = item->data().toMap();
-        if (projectFile && data.contains("cppcheckId"))
-            projectFile->suppressCppcheckId(data["cppcheckId"].toULongLong());
+        if (projectFile && data.contains("cppcheckId")) {
+            Suppressions::Suppression suppression;
+            suppression.cppcheckId = data["cppcheckId"].toULongLong();
+            suppression.errorId = data["id"].toString().toStdString();
+            suppression.fileName = data["file"].toString().toStdString();
+            suppression.lineNumber = data["line"].toInt();
+            projectFile->addSuppression(suppression);
+            changed = true;
+        }
         fileItem->removeRow(item->row());
         if (fileItem->rowCount() == 0)
             mModel.removeRow(fileItem->row());
     }
+
+    if (changed)
+        projectFile->write();
 }
 
 void ResultsTree::openContainingFolder()
