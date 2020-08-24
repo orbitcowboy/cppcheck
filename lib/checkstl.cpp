@@ -857,7 +857,7 @@ void CheckStl::invalidContainer()
                 if (skipVarIds.count(info.tok->varId()) > 0)
                     return false;
                 // if (Token::simpleMatch(info.tok->next(), "."))
-                    // return false;
+                // return false;
                 if (Token::Match(info.tok->astParent(), "%assign%") && astIsLHS(info.tok))
                     skipVarIds.insert(info.tok->varId());
                 if (info.tok->variable()->isReference() &&
@@ -2024,7 +2024,7 @@ void CheckStl::checkDereferenceInvalidIterator2()
         }
 
         // Can iterator point to END or before START?
-        for(const ValueFlow::Value& value:tok->values()) {
+        for (const ValueFlow::Value& value:tok->values()) {
             if (!printInconclusive && value.isInconclusive())
                 continue;
             if (!value.isIteratorValue())
@@ -2457,6 +2457,48 @@ void CheckStl::useStlAlgorithm()
                     continue;
                 }
             }
+        }
+    }
+}
+
+void CheckStl::knownEmptyContainerLoopError(const Token *tok)
+{
+    const std::string cont = tok ? tok->expressionString() : std::string("var");
+
+    reportError(tok, Severity::style,
+                "knownEmptyContainerLoop",
+                "Iterating over container '" + cont + "' that is always empty.", CWE398, false);
+}
+
+void CheckStl::knownEmptyContainerLoop()
+{
+    if (!mSettings->isEnabled(Settings::STYLE))
+        return;
+    for (const Scope *function : mTokenizer->getSymbolDatabase()->functionScopes) {
+        for (const Token *tok = function->bodyStart; tok != function->bodyEnd; tok = tok->next()) {
+            // Parse range-based for loop
+            if (!Token::simpleMatch(tok, "for ("))
+                continue;
+            if (!Token::simpleMatch(tok->next()->link(), ") {"))
+                continue;
+            const Token *bodyTok = tok->next()->link()->next();
+            const Token *splitTok = tok->next()->astOperand2();
+            if (!Token::simpleMatch(splitTok, ":"))
+                continue;
+            const Token* contTok = splitTok->astOperand2();
+            if (!contTok)
+                continue;
+            for (const ValueFlow::Value& v:contTok->values()) {
+                if (!v.isKnown())
+                    continue;
+                if (!v.isContainerSizeValue())
+                    continue;
+                if (v.intvalue != 0)
+                    continue;
+                knownEmptyContainerLoopError(contTok);
+            }
+
+
         }
     }
 }

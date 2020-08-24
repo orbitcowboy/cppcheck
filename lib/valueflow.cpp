@@ -1961,7 +1961,7 @@ static bool isConditionKnown(const Token* tok, bool then)
     if (then)
         op = "&&";
     const Token* parent = tok->astParent();
-    while (parent && parent->str() == op)
+    while (parent && (parent->str() == op || parent->str() == "!"))
         parent = parent->astParent();
     return (parent && parent->str() == "(");
 }
@@ -5649,14 +5649,15 @@ struct ContainerVariableForwardAnalyzer : VariableForwardAnalyzer {
             if (rhs->tokType() == Token::eString)
                 return Action::Read | Action::Write;
             if (rhs->valueType() && rhs->valueType()->container && rhs->valueType()->container->stdStringLike) {
-                if (std::any_of(rhs->values().begin(), rhs->values().end(), [&](const ValueFlow::Value &rhsval) { return rhsval.isKnown() && rhsval.isContainerSizeValue(); }))
-                    return Action::Read | Action::Write;
+                if (std::any_of(rhs->values().begin(), rhs->values().end(), [&](const ValueFlow::Value &rhsval) {
+                return rhsval.isKnown() && rhsval.isContainerSizeValue();
+                }))
+                return Action::Read | Action::Write;
             }
         } else if (Token::Match(tok, "%name% . %name% (")) {
             Library::Container::Action action = tok->valueType()->container->getAction(tok->strAt(2));
             if (action == Library::Container::Action::PUSH || action == Library::Container::Action::POP)
                 return Action::Read | Action::Write;
-            const Token* arg = tok->tokAt(4);
         }
         return Action::None;
     }
@@ -5815,7 +5816,7 @@ static void valueFlowSmartPointer(TokenList *tokenlist, ErrorLogger * errorLogge
     }
 }
 
-static void valueFlowIterators(TokenList *tokenlist, ErrorLogger * errorLogger, const Settings *settings)
+static void valueFlowIterators(TokenList *tokenlist, const Settings *settings)
 {
     for (Token *tok = tokenlist->front(); tok; tok = tok->next()) {
         if (!tok->scope())
@@ -5978,7 +5979,7 @@ static void valueFlowContainerAfterCondition(TokenList *tokenlist,
                 return cond;
             const Token *parent = tok->astParent();
             while (parent) {
-                if (Token::Match(parent, "%comp%|!"))
+                if (Token::Match(parent, "%comp%"))
                     return cond;
                 parent = parent->astParent();
             }
@@ -6431,7 +6432,7 @@ void ValueFlow::setValues(TokenList *tokenlist, SymbolDatabase* symboldatabase, 
         valueFlowUninit(tokenlist, symboldatabase, errorLogger, settings);
         if (tokenlist->isCPP()) {
             valueFlowSmartPointer(tokenlist, errorLogger, settings);
-            valueFlowIterators(tokenlist, errorLogger, settings);
+            valueFlowIterators(tokenlist, settings);
             valueFlowContainerSize(tokenlist, symboldatabase, errorLogger, settings);
             valueFlowContainerAfterCondition(tokenlist, symboldatabase, errorLogger, settings);
         }
