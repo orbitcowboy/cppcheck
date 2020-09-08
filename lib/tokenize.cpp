@@ -11222,6 +11222,13 @@ void Tokenizer::simplifyOverloadedOperators()
         if (!tok->isName())
             continue;
 
+        if (Token::simpleMatch(tok, "this ) (") && Token::simpleMatch(tok->tokAt(-2), "( *")) {
+            tok = tok->next();
+            tok->insertToken("operator()");
+            tok->insertToken(".");
+            continue;
+        }
+
         // Get classes that have operator() member
         if (Token::Match(tok, "class|struct %name% [:{]")) {
             int indent = 0;
@@ -11237,6 +11244,7 @@ void Tokenizer::simplifyOverloadedOperators()
                         tok2 = tok2->link();
                 } else if (indent == 1 && Token::simpleMatch(tok2, "operator() (") && isFunctionHead(tok2->next(), ";{")) {
                     classNames.insert(tok->strAt(1));
+                    break;
                 }
             }
         }
@@ -11257,8 +11265,12 @@ void Tokenizer::simplifyOverloadedOperators()
                 while (Token::simpleMatch(start, ",")) {
                     if (Token::simpleMatch(start->previous(), ")"))
                         start = start->linkAt(-1);
+                    else
+                        break;
                     if (Token::Match(start->previous(), "%name%"))
                         start = start->tokAt(-2);
+                    else
+                        break;
                 }
                 const Token *after = tok->linkAt(1);
                 while (Token::Match(after, ")|} , %name% (|{"))
