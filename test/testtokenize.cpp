@@ -417,6 +417,8 @@ private:
         TEST_CASE(simplifyOperatorName27);
 
         TEST_CASE(simplifyOverloadedOperators1);
+        TEST_CASE(simplifyOverloadedOperators2); // (*this)(123)
+        TEST_CASE(simplifyOverloadedOperators3); // #9881 - hang
 
         TEST_CASE(simplifyNullArray);
 
@@ -6652,6 +6654,36 @@ private:
                       tokenizeAndStringify(code));
     }
 
+    void simplifyOverloadedOperators2() { // #9879 - (*this)(123);
+        const char code[] = "struct S {\n"
+                            "  void operator()(int);\n"
+                            "  void foo() { (*this)(123); }\n"
+                            "};\n";
+        ASSERT_EQUALS("struct S {\n"
+                      "void operator() ( int ) ;\n"
+                      "void foo ( ) { ( * this ) . operator() ( 123 ) ; }\n"
+                      "} ;",
+                      tokenizeAndStringify(code));
+    }
+
+    void simplifyOverloadedOperators3() { // #9881
+        const char code[] = "struct Func { double operator()(double x) const; };\n"
+                            "void foo(double, double);\n"
+                            "void test() {\n"
+                            "    Func max;\n"
+                            "    double y = 0;\n"
+                            "    foo(0, max(y));\n"
+                            "}";
+        ASSERT_EQUALS("struct Func { double operator() ( double x ) const ; } ;\n"
+                      "void foo ( double , double ) ;\n"
+                      "void test ( ) {\n"
+                      "Func max ;\n"
+                      "double y ; y = 0 ;\n"
+                      "foo ( 0 , max . operator() ( y ) ) ;\n"
+                      "}",
+                      tokenizeAndStringify(code));
+    }
+
     void simplifyNullArray() {
         ASSERT_EQUALS("* ( foo . bar [ 5 ] ) = x ;", tokenizeAndStringify("0[foo.bar[5]] = x;"));
     }
@@ -8143,6 +8175,9 @@ private:
 
         ASSERT_THROW_EQUALS(tokenizeAndStringify("void f() { assert(a==()); }"), InternalError, "syntax error: ==()");
         ASSERT_THROW_EQUALS(tokenizeAndStringify("void f() { assert(a+()); }"), InternalError, "syntax error: +()");
+
+        // #9445 - typeof is not a keyword in C
+        ASSERT_NO_THROW(tokenizeAndStringify("void foo() { char *typeof, *value; }", false, false, Settings::Native, "test.c"));
     }
 
 
