@@ -3928,6 +3928,10 @@ static void valueFlowLifetime(TokenList *tokenlist, SymbolDatabase*, ErrorLogger
                 valueFlowForwardLifetime(tok, tokenlist, errorLogger, settings);
             }
         }
+        // Forward any lifetimes
+        else if (std::any_of(tok->values().begin(), tok->values().end(), std::mem_fn(&ValueFlow::Value::isLifetimeValue))) {
+            valueFlowForwardLifetime(tok, tokenlist, errorLogger, settings);
+        }
     }
 }
 
@@ -5491,8 +5495,6 @@ static void valueFlowSubFunction(TokenList* tokenlist, SymbolDatabase* symboldat
                 // passing value(s) to function
                 std::list<ValueFlow::Value> argvalues(getFunctionArgumentValues(argtok));
 
-                // Don't forward lifetime values
-                argvalues.remove_if(std::mem_fn(&ValueFlow::Value::isLifetimeValue));
                 // Don't forward container sizes for now since programmemory can't evaluate conditions
                 argvalues.remove_if(std::mem_fn(&ValueFlow::Value::isContainerSizeValue));
 
@@ -5513,6 +5515,9 @@ static void valueFlowSubFunction(TokenList* tokenlist, SymbolDatabase* symboldat
                                              "' value is " +
                                              v.infoString());
                     v.path = 256 * v.path + id;
+                    // Change scope of lifetime values
+                    if (v.isLifetimeValue())
+                        v.lifetimeScope = ValueFlow::Value::LifetimeScope::SubFunction;
                 }
 
                 // passed values are not "known"..
@@ -5645,10 +5650,8 @@ static void valueFlowUninit(TokenList *tokenlist, SymbolDatabase * /*symbolDatab
         // continue;
         if (!Token::Match(vardecl, "%var% ;"))
             continue;
-        if (Token::Match(vardecl, "%varid% ; %varid% =", vardecl->varId()))
-            continue;
         const Variable *var = vardecl->variable();
-        if (!var || var->nameToken() != vardecl)
+        if (!var || var->nameToken() != vardecl || var->isInit())
             continue;
         if ((!var->isPointer() && var->type() && var->type()->needInitialization != Type::NeedInitialization::True) ||
             !var->isLocal() || var->isStatic() || var->isExtern() || var->isReference() || var->isThrow())
@@ -6711,6 +6714,7 @@ void ValueFlow::setValues(TokenList *tokenlist, SymbolDatabase* symboldatabase, 
         valueFlowForLoop(tokenlist, symboldatabase, errorLogger, settings);
         valueFlowSubFunction(tokenlist, symboldatabase, errorLogger, settings);
         valueFlowFunctionReturn(tokenlist, errorLogger);
+        valueFlowLifetime(tokenlist, symboldatabase, errorLogger, settings);
         valueFlowFunctionDefaultParameter(tokenlist, symboldatabase, errorLogger, settings);
         valueFlowUninit(tokenlist, symboldatabase, errorLogger, settings);
         if (tokenlist->isCPP()) {
