@@ -164,6 +164,24 @@ private:
         return false;
     }
 
+    bool testValueOfXImpossible(const char code[], unsigned int linenr, int value) {
+        // Tokenize..
+        Tokenizer tokenizer(&settings, this);
+        std::istringstream istr(code);
+        tokenizer.tokenize(istr, "test.cpp");
+
+        for (const Token *tok = tokenizer.tokens(); tok; tok = tok->next()) {
+            if (tok->str() == "x" && tok->linenr() == linenr) {
+                for (const ValueFlow::Value& val:tok->values()) {
+                    if (val.isImpossible() && val.intvalue == value)
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     bool testValueOfX(const char code[], unsigned int linenr, int value) {
         // Tokenize..
         Tokenizer tokenizer(&settings, this);
@@ -2449,6 +2467,31 @@ private:
                "    return x;\n"
                "}\n";
         ASSERT_EQUALS(true, testValueOfX(code, 9U, 0));
+
+        code = "void g(long& a);\n"
+               "void f(long a) {\n"
+               "    if (a == 0)\n"
+               "        return;\n"
+               "    if (a > 1)\n"
+               "         g(a);\n"
+               "    int x = a;\n"
+               "    return x;\n"
+               "}\n";
+        ASSERT_EQUALS(false, testValueOfXImpossible(code, 8U, 0));
+
+        code = "bool c();\n"
+               "long f() {\n"
+               "    bool stop = false;\n"
+               "    while (!stop) {\n"
+               "        if (c())\n"
+               "            stop = true;\n"
+               "        break;\n"
+               "    }\n"
+               "    int x = !stop;\n"
+               "    return x;\n"
+               "}\n";
+        ASSERT_EQUALS(false, testValueOfXImpossible(code, 10U, 1));
+        ASSERT_EQUALS(false, testValueOfXKnown(code, 10U, 0));
     }
 
     void valueFlowAfterConditionExpr() {
