@@ -115,6 +115,7 @@ private:
         TEST_CASE(returnReference18); // #9482
         TEST_CASE(returnReference19); // #9597
         TEST_CASE(returnReference20); // #9536
+        TEST_CASE(returnReference21); // #9530
         TEST_CASE(returnReferenceFunction);
         TEST_CASE(returnReferenceContainer);
         TEST_CASE(returnReferenceLiteral);
@@ -1352,6 +1353,14 @@ private:
         ASSERT_EQUALS("", errout.str());
     }
 
+    // #9530
+    void returnReference21() {
+        check("int& f(int& x) {\n"
+              "    return {x};\n"
+              "}\n");
+        ASSERT_EQUALS("", errout.str());
+    }
+
     void returnReferenceFunction() {
         check("int& f(int& a) {\n"
               "    return a;\n"
@@ -1903,6 +1912,15 @@ private:
         check("auto f(int& i) {\n"
               "    int j = 0;\n"
               "    return [=, &i] { return j; };\n"
+              "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        check("void f(int*);\n"
+              "auto g(int y) {\n"
+              "    int x = y;\n"
+              "    return [=] {\n"
+              "        g(&x);\n"
+              "    };\n"
               "}\n");
         ASSERT_EQUALS("", errout.str());
     }
@@ -2472,6 +2490,18 @@ private:
               "  return data;\n"
               "}\n");
         ASSERT_EQUALS("", errout.str());
+
+        // #9899
+        check("struct A {\n"
+              "    std::vector<int> v;\n"
+              "    void f(std::vector<int> w) {\n"
+              "        v = std::move(w);\n"
+              "    }\n"
+              "    void g(std::vector<int> w) {\n"
+              "        f(std::move(w));\n"
+              "    }\n"
+              "};\n");
+        ASSERT_EQUALS("", errout.str());
     }
 
     void danglingLifetimeFunction() {
@@ -2503,6 +2533,18 @@ private:
             "[test.cpp:7] -> [test.cpp:7] -> [test.cpp:3] -> [test.cpp:3] -> [test.cpp:6] -> [test.cpp:7]: (error) Returning object that points to local variable 'v' that will be invalid when returning.\n",
             errout.str());
 
+        check("template<class T>\n"
+              "auto by_value(const T& x) {\n"
+              "    return [=] { return x; };\n"
+              "}\n"
+              "auto g() {\n"
+              "    std::vector<int> v;\n"
+              "    return by_value(v.begin());\n"
+              "}\n");
+        ASSERT_EQUALS(
+            "[test.cpp:7] -> [test.cpp:7] -> [test.cpp:3] -> [test.cpp:3] -> [test.cpp:2] -> [test.cpp:6] -> [test.cpp:7]: (error) Returning object that points to local variable 'v' that will be invalid when returning.\n",
+            errout.str());
+
         check("auto by_ref(int& x) {\n"
               "    return [&] { return x; };\n"
               "}\n"
@@ -2514,10 +2556,32 @@ private:
             "[test.cpp:2] -> [test.cpp:1] -> [test.cpp:2] -> [test.cpp:6] -> [test.cpp:5] -> [test.cpp:6]: (error) Returning object that points to local variable 'i' that will be invalid when returning.\n",
             errout.str());
 
+        check("auto by_ref(const int& x) {\n"
+              "    return [=] { return x; };\n"
+              "}\n"
+              "auto f() {\n"
+              "    int i = 0;\n"
+              "    return by_ref(i);\n"
+              "}\n");
+        ASSERT_EQUALS("", errout.str());
+
         check("auto f(int x) {\n"
               "    int a;\n"
               "    std::tie(a) = x;\n"
               "    return a;\n"
+              "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        check("std::pair<std::string, std::string>\n"
+              "str_pair(std::string const & a, std::string const & b) {\n"
+              "    return std::make_pair(a, b);\n"
+              "}\n"
+              "std::vector<std::pair<std::string, std::string> > create_parameters() {\n"
+              "    std::vector<std::pair<std::string, std::string> > par;\n"
+              "    par.push_back(str_pair(\"param1\", \"prop_a\"));\n"
+              "    par.push_back(str_pair(\"param2\", \"prop_b\"));\n"
+              "    par.push_back(str_pair(\"param3\", \"prop_c\"));\n"
+              "    return par;\n"
               "}\n");
         ASSERT_EQUALS("", errout.str());
     }
