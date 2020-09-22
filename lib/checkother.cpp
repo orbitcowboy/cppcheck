@@ -2023,12 +2023,11 @@ namespace {
             for (const Function &func : scope.functionList) {
                 functionsByName[func.tokenDef->str()].push_back(&func);
             }
-            for (StringFunctionMap::iterator it = functionsByName.begin();
-                 it != functionsByName.end(); ++it) {
-                const std::list<const Function*>::const_iterator nc = std::find_if(it->second.begin(), it->second.end(), notconst);
-                if (nc == it->second.end()) {
+            for (std::pair<const std::string, std::list<const Function*>>& it : functionsByName) {
+                const std::list<const Function*>::const_iterator nc = std::find_if(it.second.begin(), it.second.end(), notconst);
+                if (nc == it.second.end()) {
                     // ok to add all of them
-                    constFunctions.splice(constFunctions.end(), it->second);
+                    constFunctions.splice(constFunctions.end(), it.second);
                 }
             }
         }
@@ -3157,13 +3156,18 @@ void CheckOther::checkKnownArgument()
             if (isVariableExpression(tok2))
                 continue;
             // ensure that there is a integer variable in expression with unknown value
-            bool intvar = false;
-            visitAstNodes(tok, [&intvar](const Token *child) {
-                if (child->varId() && child->valueType() && child->valueType()->isIntegral() && child->values().empty())
-                    intvar = true;
+            std::string varexpr;
+            visitAstNodes(tok, [&varexpr](const Token *child) {
+                if (Token::Match(child, "%var%|.|[")) {
+                    if (child->valueType() && child->valueType()->isIntegral() && child->values().empty()) {
+                        varexpr = child->expressionString();
+                        return ChildrenToVisit::done;
+                    }
+                    return ChildrenToVisit::none;
+                }
                 return ChildrenToVisit::op1_and_op2;
             });
-            if (!intvar)
+            if (varexpr.empty())
                 continue;
             // ensure that function name does not contain "assert"
             std::string funcname = tok->astParent()->previous()->str();
@@ -3172,18 +3176,18 @@ void CheckOther::checkKnownArgument()
             });
             if (funcname.find("assert") != std::string::npos)
                 continue;
-            knownArgumentError(tok, tok->astParent()->previous(), &tok->values().front());
+            knownArgumentError(tok, tok->astParent()->previous(), &tok->values().front(), varexpr);
         }
     }
 }
 
-void CheckOther::knownArgumentError(const Token *tok, const Token *ftok, const ValueFlow::Value *value)
+void CheckOther::knownArgumentError(const Token *tok, const Token *ftok, const ValueFlow::Value *value, const std::string &varexpr)
 {
     MathLib::bigint intvalue = value ? value->intvalue : 0;
-    const std::string expr = tok ? tok->expressionString() : std::string("x");
+    const std::string expr = tok ? tok->expressionString() : varexpr;
     const std::string fun = ftok ? ftok->str() : std::string("f");
 
-    const std::string errmsg = "Argument '" + expr + "' to function " + fun + " is always " + std::to_string(intvalue);
+    const std::string errmsg = "Argument '" + expr + "' to function " + fun + " is always " + std::to_string(intvalue) + ". It does not matter what value '" + varexpr + "' has.";
     const ErrorPath errorPath = getErrorPath(tok, value, errmsg);
     reportError(errorPath, Severity::style, "knownArgument", errmsg, CWE570, false);
 }

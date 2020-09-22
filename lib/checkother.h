@@ -280,7 +280,7 @@ private:
     void funcArgNamesDifferent(const std::string & functionName, nonneg int index, const Token* declaration, const Token* definition);
     void funcArgOrderDifferent(const std::string & functionName, const Token * declaration, const Token * definition, const std::vector<const Token*> & declarations, const std::vector<const Token*> & definitions);
     void shadowError(const Token *var, const Token *shadowed, std::string type);
-    void knownArgumentError(const Token *tok, const Token *ftok, const ValueFlow::Value *value);
+    void knownArgumentError(const Token *tok, const Token *ftok, const ValueFlow::Value *value, const std::string &varexpr);
     void comparePointersError(const Token *tok, const ValueFlow::Value *v1, const ValueFlow::Value *v2);
     void checkModuloOfOneError(const Token *tok);
 
@@ -349,7 +349,7 @@ private:
         c.shadowError(nullptr, nullptr, "variable");
         c.shadowError(nullptr, nullptr, "function");
         c.shadowError(nullptr, nullptr, "argument");
-        c.knownArgumentError(nullptr, nullptr, nullptr);
+        c.knownArgumentError(nullptr, nullptr, nullptr, "x");
         c.comparePointersError(nullptr, nullptr, nullptr);
         c.redundantAssignmentError(nullptr, nullptr, "var", false);
         c.redundantInitializationError(nullptr, nullptr, "var", false);
@@ -418,7 +418,8 @@ private:
                "- function declaration and definition argument order different.\n"
                "- shadow variable.\n"
                "- variable can be declared const.\n"
-               "- calculating modulo of one.\n";
+               "- calculating modulo of one.\n"
+               "- known function argument, suspicious calculation.\n";
     }
 };
 /// @}
