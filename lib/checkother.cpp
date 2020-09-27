@@ -1501,7 +1501,7 @@ void CheckOther::constVariableError(const Variable *var, const Function *functio
     std::string message = "$symbol:" + varname + "\n" + vartype + " '$symbol' can be declared with const";
     errorPath.push_back(ErrorPathItem(var ? var->nameToken() : nullptr, message));
     if (var && var->isArgument() && function && function->functionPointerUsage) {
-        errorPath.push_back(ErrorPathItem(function->functionPointerUsage, "You might need to cast the function pointer here"));
+        errorPath.push_front(ErrorPathItem(function->functionPointerUsage, "You might need to cast the function pointer here"));
         id += "Callback";
         message += ". However it seems that '" + function->name() + "' is a callback function, if '$symbol' is declared with const you might also need to cast function pointer(s).";
     }
@@ -2094,19 +2094,40 @@ void CheckOther::checkDuplicateExpression()
                         isSameExpression(mTokenizer->isCPP(), true, tok->next(), nextAssign->next(), mSettings->library, true, false) &&
                         isSameExpression(mTokenizer->isCPP(), true, tok->astOperand2(), nextAssign->astOperand2(), mSettings->library, true, false) &&
                         tok->astOperand2()->expressionString() == nextAssign->astOperand2()->expressionString()) {
-                        bool assigned = false;
+                        bool differentDomain = false;
                         const Scope * varScope = var1->scope() ? var1->scope() : scope;
                         for (const Token *assignTok = Token::findsimplematch(var2, ";"); assignTok && assignTok != varScope->bodyEnd; assignTok = assignTok->next()) {
-                            if (Token::Match(assignTok, "%varid% = %var%", var1->varId()) && Token::Match(assignTok, "%var% = %varid%", var2->varId())) {
-                                assigned = true;
-                                break;
-                            }
-                            if (Token::Match(assignTok, "%varid% = %var%", var2->varId()) && Token::Match(assignTok, "%var% = %varid%", var1->varId())) {
-                                assigned = true;
-                                break;
-                            }
+                            if (!Token::Match(assignTok, "%assign%|%comp%"))
+                                continue;
+                            if (!assignTok->astOperand1())
+                                continue;
+                            if (!assignTok->astOperand2())
+                                continue;
+
+                            if (assignTok->astOperand1()->varId() != var1->varId() &&
+                                assignTok->astOperand1()->varId() != var2->varId() &&
+                                !isSameExpression(mTokenizer->isCPP(),
+                                                  true,
+                                                  tok->astOperand2(),
+                                                  assignTok->astOperand1(),
+                                                  mSettings->library,
+                                                  true,
+                                                  true))
+                                continue;
+                            if (assignTok->astOperand2()->varId() != var1->varId() &&
+                                assignTok->astOperand2()->varId() != var2->varId() &&
+                                !isSameExpression(mTokenizer->isCPP(),
+                                                  true,
+                                                  tok->astOperand2(),
+                                                  assignTok->astOperand2(),
+                                                  mSettings->library,
+                                                  true,
+                                                  true))
+                                continue;
+                            differentDomain = true;
+                            break;
                         }
-                        if (!assigned && !isUniqueExpression(tok->astOperand2()))
+                        if (!differentDomain && !isUniqueExpression(tok->astOperand2()))
                             duplicateAssignExpressionError(var1, var2, false);
                         else if (mSettings->inconclusive)
                             duplicateAssignExpressionError(var1, var2, true);
@@ -3177,7 +3198,8 @@ void CheckOther::checkKnownArgument()
                 continue;
             // ensure that there is a integer variable in expression with unknown value
             std::string varexpr;
-            visitAstNodes(tok, [&varexpr](const Token *child) {
+            bool isVariableExprHidden = false;  // Is variable expression explicitly hidden
+            auto setVarExpr = [&varexpr, &isVariableExprHidden](const Token *child) {
                 if (Token::Match(child, "%var%|.|[")) {
                     if (child->valueType() && child->valueType()->pointer == 0 && child->valueType()->isIntegral() && child->values().empty()) {
                         varexpr = child->expressionString();
@@ -3187,8 +3209,24 @@ void CheckOther::checkKnownArgument()
                 }
                 if (Token::simpleMatch(child->previous(), "sizeof ("))
                     return ChildrenToVisit::none;
+
+                // hide variable explicitly with 'x * 0' etc
+                if (!isVariableExprHidden) {
+                    if (Token::simpleMatch(child, "*") && (Token::simpleMatch(child->astOperand1(), "0") || Token::simpleMatch(child->astOperand2(), "0")))
+                        return ChildrenToVisit::none;
+                    if (Token::simpleMatch(child, "&&") && (Token::simpleMatch(child->astOperand1(), "false") || Token::simpleMatch(child->astOperand2(), "false")))
+                        return ChildrenToVisit::none;
+                    if (Token::simpleMatch(child, "||") && (Token::simpleMatch(child->astOperand1(), "true") || Token::simpleMatch(child->astOperand2(), "true")))
+                        return ChildrenToVisit::none;
+                }
+
                 return ChildrenToVisit::op1_and_op2;
-            });
+            };
+            visitAstNodes(tok, setVarExpr);
+            if (varexpr.empty()) {
+                isVariableExprHidden = true;
+                visitAstNodes(tok, setVarExpr);
+            }
             if (varexpr.empty())
                 continue;
             // ensure that function name does not contain "assert"
@@ -3198,20 +3236,35 @@ void CheckOther::checkKnownArgument()
             });
             if (funcname.find("assert") != std::string::npos)
                 continue;
-            knownArgumentError(tok, tok->astParent()->previous(), &tok->values().front(), varexpr);
+            knownArgumentError(tok, tok->astParent()->previous(), &tok->values().front(), varexpr, isVariableExprHidden);
         }
     }
 }
 
-void CheckOther::knownArgumentError(const Token *tok, const Token *ftok, const ValueFlow::Value *value, const std::string &varexpr)
+void CheckOther::knownArgumentError(const Token *tok, const Token *ftok, const ValueFlow::Value *value, const std::string &varexpr, bool isVariableExpressionHidden)
 {
-    MathLib::bigint intvalue = value ? value->intvalue : 0;
-    const std::string expr = tok ? tok->expressionString() : varexpr;
-    const std::string fun = ftok ? ftok->str() : std::string("f");
+    if (!tok) {
+        reportError(tok, Severity::style, "knownArgument", "Argument 'x-x' to function 'func' is always 0. It does not matter what value 'x' has.");
+        reportError(tok, Severity::style, "knownArgumentHiddenVariableExpression", "Argument 'x*0' to function 'func' is always 0. Constant literal calculation disable/hide variable expression 'x'.");
+        return;
+    }
 
-    const std::string errmsg = "Argument '" + expr + "' to function " + fun + " is always " + std::to_string(intvalue) + ". It does not matter what value '" + varexpr + "' has.";
+    const MathLib::bigint intvalue = value->intvalue;
+    const std::string &expr = tok->expressionString();
+    const std::string &fun = ftok->str();
+
+    const char *id;;
+    std::string errmsg = "Argument '" + expr + "' to function " + fun + " is always " + std::to_string(intvalue) + ". ";
+    if (!isVariableExpressionHidden) {
+        id = "knownArgument";
+        errmsg += "It does not matter what value '" + varexpr + "' has.";
+    } else {
+        id = "knownArgumentHiddenVariableExpression";
+        errmsg += "Constant literal calculation disable/hide variable expression '" + varexpr + "'.";
+    }
+
     const ErrorPath errorPath = getErrorPath(tok, value, errmsg);
-    reportError(errorPath, Severity::style, "knownArgument", errmsg, CWE570, false);
+    reportError(errorPath, Severity::style, id, errmsg, CWE570, false);
 }
 
 void CheckOther::checkComparePointers()

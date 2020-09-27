@@ -242,7 +242,8 @@ private:
         TEST_CASE(cpp11FunctionArgInit); // #7846 - "void foo(int declaration = {}) {"
 
         TEST_CASE(shadowVariables);
-        TEST_CASE(constArgument);
+        TEST_CASE(knownArgument);
+        TEST_CASE(knownArgumentHiddenVariableExpression);
         TEST_CASE(checkComparePointers);
 
         TEST_CASE(unusedVariableValueTemplate); // #8994
@@ -2559,7 +2560,7 @@ private:
     void constParameterCallback() {
         check("int callback(std::vector<int>& x) { return x[0]; }\n"
               "void f() { dostuff(callback); }");
-        ASSERT_EQUALS("[test.cpp:1] -> [test.cpp:2]: (style) Parameter 'x' can be declared with const. However it seems that 'callback' is a callback function, if 'x' is declared with const you might also need to cast function pointer(s).\n", errout.str());
+        ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:1]: (style) Parameter 'x' can be declared with const. However it seems that 'callback' is a callback function, if 'x' is declared with const you might also need to cast function pointer(s).\n", errout.str());
 
         // #9906
         check("class EventEngine : public IEventEngine {\n"
@@ -2577,7 +2578,7 @@ private:
               "void EventEngine::signalEvent(ev::sig& signal, int revents) {\n"
               "    switch (signal.signum) {}\n"
               "}");
-        ASSERT_EQUALS("[test.cpp:13] -> [test.cpp:10]: (style) Parameter 'signal' can be declared with const. However it seems that 'signalEvent' is a callback function, if 'signal' is declared with const you might also need to cast function pointer(s).\n", errout.str());
+        ASSERT_EQUALS("[test.cpp:10] -> [test.cpp:13]: (style) Parameter 'signal' can be declared with const. However it seems that 'signalEvent' is a callback function, if 'signal' is declared with const you might also need to cast function pointer(s).\n", errout.str());
     }
 
     void switchRedundantAssignmentTest() {
@@ -5717,6 +5718,42 @@ private:
               "}");
         ASSERT_EQUALS("[test.cpp:4] -> [test.cpp:3]: (style, inconclusive) Same expression used in consecutive assignments of 'i' and 'j'.\n", errout.str());
 
+        check("struct A { int x; int y; };"
+              "void use(int);\n"
+              "void test(A a) {\n"
+              "    int i = a.x;\n"
+              "    int j = a.x;\n"
+              "    use(j);\n"
+              "    if (i == j) {}\n"
+              "}");
+        ASSERT_EQUALS(
+            "[test.cpp:4] -> [test.cpp:3]: (style, inconclusive) Same expression used in consecutive assignments of 'i' and 'j'.\n",
+            errout.str());
+
+        check("struct A { int x; int y; };"
+              "void use(int);\n"
+              "void test(A a) {\n"
+              "    int i = a.x;\n"
+              "    int j = a.x;\n"
+              "    use(j);\n"
+              "    if (i == a.x) {}\n"
+              "}");
+        ASSERT_EQUALS(
+            "[test.cpp:4] -> [test.cpp:3]: (style, inconclusive) Same expression used in consecutive assignments of 'i' and 'j'.\n",
+            errout.str());
+
+        check("struct A { int x; int y; };"
+              "void use(int);\n"
+              "void test(A a) {\n"
+              "    int i = a.x;\n"
+              "    int j = a.x;\n"
+              "    use(i);\n"
+              "    if (j == a.x) {}\n"
+              "}");
+        ASSERT_EQUALS(
+            "[test.cpp:4] -> [test.cpp:3]: (style, inconclusive) Same expression used in consecutive assignments of 'i' and 'j'.\n",
+            errout.str());
+
         // Issue #8612
         check("struct P\n"
               "{\n"
@@ -8802,7 +8839,7 @@ private:
         ASSERT_EQUALS("", errout.str());
     }
 
-    void constArgument() {
+    void knownArgument() {
         check("void g(int);\n"
               "void f(int x) {\n"
               "   g((x & 0x01) >> 7);\n"
@@ -8927,6 +8964,22 @@ private:
               "    dostuff(self->maxsize * sizeof(intptr_t));\n"
               "}");
         ASSERT_EQUALS("", errout.str());
+    }
+
+    void knownArgumentHiddenVariableExpression() {
+        // #9914 - variable expression is explicitly hidden
+        check("void f(int x) {\n"
+              "    dostuff(x && false);\n"
+              "    dostuff(false && x);\n"
+              "    dostuff(x || true);\n"
+              "    dostuff(true || x);\n"
+              "    dostuff(x * 0);\n"
+              "    dostuff(0 * x);\n"
+              "}\n");
+        ASSERT_EQUALS("[test.cpp:3]: (style) Argument 'false&&x' to function dostuff is always 0. Constant literal calculation disable/hide variable expression 'x'.\n"
+                      "[test.cpp:5]: (style) Argument 'true||x' to function dostuff is always 1. Constant literal calculation disable/hide variable expression 'x'.\n"
+                      "[test.cpp:6]: (style) Argument 'x*0' to function dostuff is always 0. Constant literal calculation disable/hide variable expression 'x'.\n"
+                      "[test.cpp:7]: (style) Argument '0*x' to function dostuff is always 0. Constant literal calculation disable/hide variable expression 'x'.\n", errout.str());
     }
 
     void checkComparePointers() {
