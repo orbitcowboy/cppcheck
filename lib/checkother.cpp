@@ -894,19 +894,8 @@ void CheckOther::checkVariableScope()
 
     // In C it is common practice to declare local variables at the
     // start of functions.
-    if (mTokenizer->isC()) {
-        // Try to autodetect what coding style is used. If a local variable is
-        // declared in an inner scope then we will warn about all variables.
-        bool limitScope = false;
-        for (const Variable* var : symbolDatabase->variableList()) {
-            if (var && var->isLocal() && var->nameToken()->scope()->type != Scope::ScopeType::eFunction) {
-                limitScope = true;
-                break;
-            }
-        }
-        if (!limitScope)
-            return;
-    }
+    if (mSettings->daca && mTokenizer->isC())
+        return;
 
     for (const Variable* var : symbolDatabase->variableList()) {
         if (!var || !var->isLocal() || (!var->isPointer() && !var->isReference() && !var->typeStartToken()->isStandardType()))
@@ -1709,6 +1698,27 @@ void CheckOther::checkIncompleteStatement()
             continue;
         if (tok->str() == "," && Token::simpleMatch(tok->astTop()->previous(), "for ("))
             continue;
+
+        // Do not warn for statement when both lhs and rhs has side effects:
+        //   dostuff() || x=213;
+        if (Token::Match(tok, "%oror%|&&")) {
+            bool warn = false;
+            visitAstNodes(tok, [&warn](const Token *child) {
+                if (Token::Match(child, "%oror%|&&"))
+                    return ChildrenToVisit::op1_and_op2;
+                if (child->isAssignmentOp())
+                    return ChildrenToVisit::none;
+                if (child->tokType() == Token::Type::eIncDecOp)
+                    return ChildrenToVisit::none;
+                if (Token::Match(child->previous(), "%name% ("))
+                    return ChildrenToVisit::none;
+                warn = true;
+                return ChildrenToVisit::done;
+            });
+            if (!warn)
+                continue;
+        }
+
         const Token *rtok = nextAfterAstRightmostLeaf(tok);
         if (!Token::simpleMatch(tok->astParent(), ";") && !Token::simpleMatch(rtok, ";") &&
             !Token::Match(tok->previous(), ";|}|{ %any% ;"))
@@ -2708,6 +2718,9 @@ void CheckOther::checkRedundantPointerOp()
 
     for (const Token *tok = mTokenizer->tokens(); tok; tok = tok->next()) {
         if (!tok->isUnaryOp("&") || !tok->astOperand1()->isUnaryOp("*"))
+            continue;
+
+        if (tok->isExpandedMacro())
             continue;
 
         // variable
