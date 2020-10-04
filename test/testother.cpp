@@ -5861,7 +5861,7 @@ private:
 
         check("void f() {\n"
               "  int val = 0;\n"
-              "  int *p = &val;n"
+              "  int *p = &val;\n"
               "  if (*p < 0) continue;\n"
               "  if ((*p > 0)) {}\n"
               "}\n");

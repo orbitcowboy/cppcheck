@@ -324,6 +324,7 @@ private:
         TEST_CASE(symboldatabase84);
         TEST_CASE(symboldatabase85);
         TEST_CASE(symboldatabase86);
+        TEST_CASE(symboldatabase87); // #9922 'extern const char ( * x [ 256 ] ) ;'
 
         TEST_CASE(createSymbolDatabaseFindAllScopes1);
 
@@ -4739,6 +4740,12 @@ private:
         ASSERT(db->scopeList.back().functionList.front().hasBody() == false);
     }
 
+    void symboldatabase87() { // #9922 'extern const char ( * x [ 256 ] ) ;'
+        GET_SYMBOL_DB("extern const char ( * x [ 256 ] ) ;");
+        const Token *xtok = Token::findsimplematch(tokenizer.tokens(), "x");
+        ASSERT(xtok->variable());
+    }
+
     void createSymbolDatabaseFindAllScopes1() {
         GET_SYMBOL_DB("void f() { union {int x; char *p;} a={0}; }");
         ASSERT(db->scopeList.size() == 3);
@@ -6658,7 +6665,7 @@ private:
 
     void executableScopeWithUnknownFunction() {
         GET_SYMBOL_DB("class Fred {\n"
-                      "    void foo(const std::string & a = "");\n"
+                      "    void foo(const std::string & a = \"\");\n"
                       "};\n"
                       "Fred::foo(const std::string & b) { }\n");
 

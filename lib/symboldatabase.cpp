@@ -2818,6 +2818,26 @@ void SymbolDatabase::addNewFunction(Scope **scope, const Token **tok)
     }
 }
 
+bool Type::isClassType() const
+{
+    return classScope && classScope->type == Scope::ScopeType::eClass;
+}
+
+bool Type::isEnumType() const
+{
+    return classScope && classScope->type == Scope::ScopeType::eEnum;
+}
+
+bool Type::isStructType() const
+{
+    return classScope && classScope->type == Scope::ScopeType::eStruct;
+}
+
+bool Type::isUnionType() const
+{
+    return classScope && classScope->type == Scope::ScopeType::eUnion;
+}
+
 const Token *Type::initBaseInfo(const Token *tok, const Token *tok1)
 {
     // goto initial '{'
@@ -4111,6 +4131,12 @@ static const Token* skipPointers(const Token* tok)
         tok = tok->next();
         if (tok->strAt(-1) == "(" && Token::Match(tok, "%type% ::"))
             tok = tok->tokAt(2);
+    }
+
+    if (Token::simpleMatch(tok, "( *") && Token::simpleMatch(tok->link()->previous(), "] ) ;")) {
+        const Token *tok2 = skipPointers(tok->next());
+        if (Token::Match(tok2, "%name% [") && Token::simpleMatch(tok2->linkAt(1), "] ) ;"))
+            return tok2;
     }
 
     return tok;
