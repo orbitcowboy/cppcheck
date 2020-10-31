@@ -473,7 +473,6 @@ void clangimport::AstNode::setValueType(Token *tok)
             break;
         }
     }
-    return;
 }
 
 Scope *clangimport::AstNode::createScope(TokenList *tokenList, Scope::ScopeType scopeType, AstNodePtr astNode, const Token *def)
@@ -630,10 +629,12 @@ Token *clangimport::AstNode::createTokens(TokenList *tokenList)
         if (!children.empty())
             return children[0]->createTokens(tokenList);
         addTypeTokens(tokenList, '\'' + getType() + '\'');
+        Token *type = tokenList->back();
         Token *par1 = addtoken(tokenList, "(");
         Token *par2 = addtoken(tokenList, ")");
         par1->link(par2);
         par2->link(par1);
+        par1->astOperand1(type);
         return par1;
     }
     if (nodeType == CXXConstructorDecl) {
@@ -694,6 +695,10 @@ Token *clangimport::AstNode::createTokens(TokenList *tokenList)
         return createTokensCall(tokenList);
     if (nodeType == CXXNewExpr) {
         Token *newtok = addtoken(tokenList, "new");
+        if (children.size() == 1 && children[0]->nodeType == CXXConstructExpr) {
+            newtok->astOperand1(children[0]->createTokens(tokenList));
+            return newtok;
+        }
         std::string type = getType();
         if (type.find("*") != std::string::npos)
             type = type.erase(type.rfind("*"));
