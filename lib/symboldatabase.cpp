@@ -1837,6 +1837,8 @@ Variable::Variable(const Token *name_, const std::string &clangType, const Token
         mTypeStartToken = mTypeEndToken;
         while (Token::Match(mTypeStartToken->previous(), "%type%|*|&"))
             mTypeStartToken = mTypeStartToken->previous();
+        if (mTypeStartToken->str() == "const")
+            mTypeStartToken = mTypeStartToken->next();
     }
     if (Token::simpleMatch(mTypeStartToken, "static"))
         setFlag(fIsStatic, true);
@@ -3681,8 +3683,8 @@ void Function::addArguments(const SymbolDatabase *symbolDatabase, const Scope *s
         argumentList.emplace_back(nameTok, startTok, endTok, count++, AccessControl::Argument, argType, functionScope, symbolDatabase->mSettings);
 
         if (tok->str() == ")") {
-            // check for a variadic function
-            if (Token::simpleMatch(startTok, "..."))
+            // check for a variadic function or a variadic template function
+            if (Token::simpleMatch(endTok, "..."))
                 isVariadic(true);
 
             break;
