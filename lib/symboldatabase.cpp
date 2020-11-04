@@ -1840,6 +1840,8 @@ Variable::Variable(const Token *name_, const std::string &clangType, const Token
             mTypeStartToken = mTypeStartToken->previous();
         if (mTypeStartToken->str() == "const")
             mTypeStartToken = mTypeStartToken->next();
+        if (mTypeStartToken->str() == "struct")
+            mTypeStartToken = mTypeStartToken->next();
     }
     if (Token::simpleMatch(mTypeStartToken, "static"))
         setFlag(fIsStatic, true);
@@ -4805,7 +4807,7 @@ const Function* Scope::findFunction(const Token *tok, bool requireConst) const
                 fallback1++;
 
             // Try to evaluate the apparently more complex expression
-            else {
+            else if (check->isCPP()) {
                 const Token *vartok = arguments[j];
                 while (vartok->isUnaryOp("&") || vartok->isUnaryOp("*"))
                     vartok = vartok->astOperand1();
@@ -4823,6 +4825,10 @@ const Function* Scope::findFunction(const Token *tok, bool requireConst) const
                     break;
                 }
             }
+
+            else
+                // C code: if number of arguments match then do not match types
+                fallback1++;
         }
 
         const size_t hasToBe = func->isVariadic() ? (func->argCount() - 1) : args;
