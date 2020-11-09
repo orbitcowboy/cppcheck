@@ -2177,7 +2177,7 @@ Function::Function(const Tokenizer *mTokenizer,
     }
 }
 
-Function::Function(const Token *tokenDef)
+Function::Function(const Token *tokenDef, const std::string &clangType)
     : tokenDef(tokenDef),
       argDef(nullptr),
       token(nullptr),
@@ -2205,6 +2205,9 @@ Function::Function(const Token *tokenDef)
     }
 
     setFlags(tokenDef, tokenDef->scope());
+
+    if (endsWith(clangType, " const", 6))
+        isConst(true);
 }
 
 const Token *Function::setFlags(const Token *tok1, const Scope *scope)
@@ -6249,6 +6252,10 @@ void SymbolDatabase::setValueTypeInTokenList(bool reportDebugWarnings, Token *to
                     vt.sign = (vt.type == ValueType::Type::CHAR) ? mDefaultSignedness : ValueType::Sign::SIGNED;
             }
             setValueType(tok, vt);
+            if (Token::simpleMatch(tok->astOperand1(), "(")) {
+                vt.pointer--;
+                setValueType(tok->astOperand1(), vt);
+            }
         } else if (tok->isKeyword() && tok->str() == "return" && tok->scope()) {
             const Scope* fscope = tok->scope();
             while (fscope && !fscope->function)

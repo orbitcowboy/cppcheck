@@ -42,7 +42,8 @@ private:
         TEST_CASE(continueStmt);
         TEST_CASE(cstyleCastExpr);
         TEST_CASE(cxxBoolLiteralExpr);
-        TEST_CASE(cxxConstructorDecl);
+        TEST_CASE(cxxConstructorDecl1);
+        TEST_CASE(cxxConstructorDecl2);
         TEST_CASE(cxxConstructExpr1);
         TEST_CASE(cxxConstructExpr2);
         TEST_CASE(cxxConstructExpr3);
@@ -82,7 +83,8 @@ private:
         TEST_CASE(ifStmt);
         TEST_CASE(labelStmt);
         TEST_CASE(memberExpr);
-        TEST_CASE(namespaceDecl);
+        TEST_CASE(namespaceDecl1);
+        TEST_CASE(namespaceDecl2);
         TEST_CASE(recordDecl);
         TEST_CASE(switchStmt);
         TEST_CASE(typedefDecl1);
@@ -104,12 +106,14 @@ private:
         TEST_CASE(symbolDatabaseFunction1);
         TEST_CASE(symbolDatabaseFunction2);
         TEST_CASE(symbolDatabaseFunction3);
+        TEST_CASE(symbolDatabaseFunctionConst);
         TEST_CASE(symbolDatabaseNodeType1);
 
         TEST_CASE(valueFlow1);
         TEST_CASE(valueFlow2);
 
         TEST_CASE(valueType1);
+        TEST_CASE(valueType2);
     }
 
     std::string parse(const char clang[]) {
@@ -249,7 +253,7 @@ private:
                              "|   | `-ParmVarDecl 0x247c790 <col:25> col:25 'const C<int> &'\n"
                              "|   `-CXXConstructorDecl 0x247c828 <col:25> col:25 implicit constexpr C 'void (C<int> &&)' inline default trivial noexcept-unevaluated 0x247c828\n"
                              "|     `-ParmVarDecl 0x247c960 <col:25> col:25 'C<int> &&'\n";
-        ASSERT_EQUALS("class C { int foo ( ) { return 0 ; } default ( ) { } noexcept-unevaluated ( const C<int> & ) ; noexcept-unevaluated ( C<int> && ) ; } ;", parse(clang));
+        ASSERT_EQUALS("class C { int foo ( ) { return 0 ; } C ( ) { } C ( const C<int> & ) = default ; C ( C<int> && ) = default ; } ;", parse(clang));
     }
 
     void conditionalExpr() {
@@ -296,7 +300,7 @@ private:
         ASSERT_EQUALS("bool x@1 = true ;", parse(clang));
     }
 
-    void cxxConstructorDecl() {
+    void cxxConstructorDecl1() {
         const char clang[] = "|-CXXConstructorDecl 0x428e890 <col:11, col:24> col:11 C 'void ()'\n"
                              "| `-CompoundStmt 0x428ea58 <col:15, col:24>\n"
                              "|   `-BinaryOperator 0x428ea30 <col:17, col:21> 'int' lvalue '='\n"
@@ -305,6 +309,12 @@ private:
                              "|     `-IntegerLiteral 0x428ea10 <col:21> 'int' 0\n"
                              "`-FieldDecl 0x428e958 <col:26, col:30> col:30 referenced x 'int'";
         ASSERT_EQUALS("C ( ) { this . x@1 = 0 ; } int x@1", parse(clang));
+    }
+
+    void cxxConstructorDecl2() {
+        const char clang[] = "`-CXXConstructorDecl 0x1c208c0 <col:11> col:11 implicit constexpr basic_string 'void (std::basic_string<char> &&)' inline default trivial noexcept-unevaluated 0x1c208c0\n"
+                             "  `-ParmVarDecl 0x1c209f0 <col:11> col:11 'std::basic_string<char> &&'";
+        ASSERT_EQUALS("basic_string ( std :: basic_string<char> && ) = default ;", parse(clang));
     }
 
     void cxxConstructExpr1() {
@@ -323,7 +333,7 @@ private:
                              "  `-CompoundStmt 0x3e4cb80 <col:17, col:30>\n"
                              "    `-ReturnStmt 0x3e4cb68 <col:19, col:27>\n"
                              "      `-CXXConstructExpr 0x3e4cb38 <col:26, col:27> 'std::string':'std::__cxx11::basic_string<char>' '....' list";
-        ASSERT_EQUALS("std::string f ( ) { return std::string ( ) ; }", parse(clang));
+        ASSERT_EQUALS("std :: string f ( ) { return std :: string ( ) ; }", parse(clang));
     }
 
     void cxxConstructExpr3() {
@@ -339,7 +349,7 @@ private:
                              "            | `-ImplicitCastExpr 0x2c58858 <col:35> 'char *' <LValueToRValue>\n"
                              "            |   `-DeclRefExpr 0x2c58750 <col:35> 'char *' lvalue Var 0x2c58670 'p' 'char *'\n"
                              "            `-CXXDefaultArgExpr 0x2c58940 <<invalid sloc>> 'const std::allocator<char>':'const std::allocator<char>' lvalue\n";
-        ASSERT_EQUALS("void f ( ) { char * p@1 ; std::string s@2 ( p@1 ) ; }", parse(clang));
+        ASSERT_EQUALS("void f ( ) { char * p@1 ; std :: string s@2 ( p@1 ) ; }", parse(clang));
     }
 
     void cxxDeleteExpr() {
@@ -468,7 +478,7 @@ private:
                              "| |-ParmVarDecl 0x55c786f5a6a8 <col:106, col:125> col:125 checksum 'unsigned long long'\n"
                              "| |-ParmVarDecl 0x55c786f5ac00 <col:135, col:173> col:173 errors 'std::list<ErrorLogger::ErrorMessage> *'\n"
                              "  `-CompoundStmt 0x0 <>";
-        ASSERT_EQUALS("_Bool analyzeFile ( const std::string & buildDir@1 , const std::string & sourcefile@2 , const std::string & cfg@3 , unsigned long long checksum@4 , std::list<ErrorLogger::ErrorMessage> * errors@5 ) { }", parse(clang));
+        ASSERT_EQUALS("_Bool analyzeFile ( const std :: string & buildDir@1 , const std :: string & sourcefile@2 , const std :: string & cfg@3 , unsigned long long checksum@4 , std :: list<ErrorLogger::ErrorMessage> * errors@5 ) { }", parse(clang));
     }
 
     void cxxMethodDecl2() { // "unexpanded" template method
@@ -492,7 +502,7 @@ private:
                              "| `-CXXMethodDecl 0x21ccc68 <line:3:1, col:10> col:6 foo 'void ()'\n"
                              "`-CXXMethodDecl 0x21ccd60 parent 0x21cca40 prev 0x21ccc68 <line:6:1, col:19> col:12 foo 'void ()'\n"
                              "  `-CompoundStmt 0x21cce50 <col:18, col:19>";
-        ASSERT_EQUALS("class Fred { void foo ( ) ; } ; void foo ( ) { }", parse(clang));
+        ASSERT_EQUALS("class Fred { void foo ( ) ; } ; void Fred :: foo ( ) { }", parse(clang));
     }
 
     void cxxNewExpr1() {
@@ -584,7 +594,7 @@ private:
                              "      |     |-IntegerLiteral 0x2f920e0 <col:22> 'int' 2\n"
                              "      |     `-IntegerLiteral 0x2f92100 <col:24> 'int' 3\n"
                              "      `-CXXDefaultArgExpr 0x2fb0ae0 <<invalid sloc>> 'const std::vector<int, std::allocator<int> >::allocator_type':'const std::allocator<int>' lvalue";
-        ASSERT_EQUALS("std::vector<int> x@1 { 1 , 2 , 3 } ;", parse(clang));
+        ASSERT_EQUALS("std :: vector<int> x@1 { 1 , 2 , 3 } ;", parse(clang));
     }
 
     void cxxThrowExpr() {
@@ -784,10 +794,18 @@ private:
                       parse(clang));
     }
 
-    void namespaceDecl() {
+    void namespaceDecl1() {
         const char clang[] = "`-NamespaceDecl 0x2e5f658 <hello.cpp:1:1, col:24> col:11 x\n"
                              "  `-VarDecl 0x2e5f6d8 <col:15, col:19> col:19 var 'int'";
         ASSERT_EQUALS("namespace x { int var@1 ; }",
+                      parse(clang));
+    }
+
+    void namespaceDecl2() {
+        const char clang[] = "`-NamespaceDecl 0x1753e60 <1.cpp:1:1, line:4:1> line:1:11 std\n"
+                             "  |-VisibilityAttr 0x1753ed0 <col:31, col:56> Default\n"
+                             "  `-VarDecl 0x1753f40 <line:3:5, col:9> col:9 x 'int'";
+        ASSERT_EQUALS("namespace std { int x@1 ; }",
                       parse(clang));
     }
 
@@ -954,7 +972,7 @@ private:
                              "`-VarDecl 0x29ad898 <line:5:1, col:22> col:9 x 'ns::abc':'ns::abc' cinit\n"
                              "  `-DeclRefExpr 0x29ad998 <col:13, col:22> 'ns::abc' EnumConstant 0x29ad7b0 'c' 'ns::abc'\n";
 
-        ASSERT_EQUALS("namespace ns { enum abc { a , b , c } } ns::abc x@1 = c ;", parse(clang));
+        ASSERT_EQUALS("namespace ns { enum abc { a , b , c } } ns :: abc x@1 = c ;", parse(clang));
 
         GET_SYMBOL_DB(clang);
 
@@ -1027,6 +1045,19 @@ private:
         ASSERT_EQUALS(true, func->getArgumentVar(1)->isReference());
     }
 
+    void symbolDatabaseFunctionConst() {
+        const char clang[] = "`-CXXRecordDecl 0x7e2d98 <1.cpp:2:1, line:5:1> line:2:7 class foo definition\n"
+                             "  `-CXXMethodDecl 0x7e3000 <line:4:3, col:12> col:8 f 'void () const'";
+
+        GET_SYMBOL_DB(clang);
+
+        // There is a function f that is const
+        ASSERT_EQUALS(2, db->scopeList.size());
+        ASSERT_EQUALS(1, db->scopeList.back().functionList.size());
+        const Function &func = db->scopeList.back().functionList.back();
+        ASSERT(func.isConst());
+    }
+
     void symbolDatabaseNodeType1() {
         const char clang[] = "`-FunctionDecl 0x32438c0 <line:5:1, line:7:1> line:5:6 foo 'a::b (a::b)'\n"
                              "  |-ParmVarDecl 0x32437b0 <col:10, col:15> col:15 used i 'a::b':'long'\n"
@@ -1093,6 +1124,19 @@ private:
         ASSERT(!!tok);
         ASSERT(!!tok->valueType());
         ASSERT_EQUALS("bool", tok->valueType()->str());
+    }
+
+    void valueType2() {
+        const char clang[] = "`-VarDecl 0xc9eda0 <1.cpp:2:1, col:17> col:13 s 'const char *' cinit\n"
+                             "  `-ImplicitCastExpr 0xc9eef0 <col:17> 'const char *' <ArrayToPointerDecay>\n"
+                             "    `-StringLiteral 0xc9eed0 <col:17> 'const char [6]' lvalue \"hello\"\n";
+
+        GET_SYMBOL_DB(clang);
+
+        const Token *tok = Token::findsimplematch(tokenizer.tokens(), "\"hello\"");
+        ASSERT(!!tok);
+        ASSERT(!!tok->valueType());
+        ASSERT_EQUALS("const signed char *", tok->valueType()->str());
     }
 };
 
