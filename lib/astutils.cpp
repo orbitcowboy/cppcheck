@@ -213,7 +213,12 @@ const Token * astIsVariableComparison(const Token *tok, const std::string &comp,
             ret = tok->astOperand1();
         }
     } else if (comp == "!=" && rhs == std::string("0")) {
-        ret = tok;
+        if (tok->str() == "!") {
+            ret = tok->astOperand1();
+            // handle (!(x==0)) as (x!=0)
+            astIsVariableComparison(ret, "==", "0", &ret);
+        } else
+            ret = tok;
     } else if (comp == "==" && rhs == std::string("0")) {
         if (tok->str() == "!") {
             ret = tok->astOperand1();
@@ -300,6 +305,18 @@ static bool hasToken(const Token * startTok, const Token * stopTok, const Token 
     }
     return false;
 }
+
+template <class T, REQUIRES("T must be a Token class", std::is_convertible<T*, const Token*>)>
+static T* previousBeforeAstLeftmostLeafGeneric(T* tok)
+{
+    T* leftmostLeaf = tok;
+    while (leftmostLeaf && leftmostLeaf->astOperand1())
+        leftmostLeaf = leftmostLeaf->astOperand1();
+    return leftmostLeaf->previous();
+}
+
+const Token* previousBeforeAstLeftmostLeaf(const Token* tok) { return previousBeforeAstLeftmostLeafGeneric(tok); }
+Token* previousBeforeAstLeftmostLeaf(Token* tok) { return previousBeforeAstLeftmostLeafGeneric(tok); }
 
 template <class T, REQUIRES("T must be a Token class", std::is_convertible<T*, const Token*>)>
 static T* nextAfterAstRightmostLeafGeneric(T* tok)

@@ -1838,16 +1838,20 @@ Variable::Variable(const Token *name_, const std::string &clangType, const Token
         mTypeStartToken = mTypeEndToken;
         while (Token::Match(mTypeStartToken->previous(), "%type%|*|&"))
             mTypeStartToken = mTypeStartToken->previous();
-        if (mTypeStartToken->str() == "const")
-            mTypeStartToken = mTypeStartToken->next();
-        if (mTypeStartToken->str() == "struct")
-            mTypeStartToken = mTypeStartToken->next();
     }
-    if (Token::simpleMatch(mTypeStartToken, "static"))
-        setFlag(fIsStatic, true);
 
-    if (endsWith(clangType, " &", 2))
+    while (Token::Match(mTypeStartToken, "const|struct|static")) {
+        if (mTypeStartToken->str() == "static")
+            setFlag(fIsStatic, true);
+        mTypeStartToken = mTypeStartToken->next();
+    }
+
+    if (Token::simpleMatch(mTypeEndToken, "&"))
         setFlag(fIsReference, true);
+    else if (Token::simpleMatch(mTypeEndToken, "&&")) {
+        setFlag(fIsReference, true);
+        setFlag(fIsRValueRef, true);
+    }
 
     std::string::size_type pos = clangType.find("[");
     if (pos != std::string::npos) {

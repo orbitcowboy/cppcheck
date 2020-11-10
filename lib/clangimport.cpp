@@ -108,6 +108,11 @@ static std::vector<std::string> splitString(const std::string &line)
     std::string::size_type pos1 = line.find_first_not_of(" ");
     while (pos1 != std::string::npos) {
         std::string::size_type pos2;
+        if (line[pos1] == '*') {
+            ret.push_back("*");
+            pos1 = line.find_first_not_of(" ", pos1 + 1);
+            continue;
+        }
         if (line[pos1] == '<')
             pos2 = line.find(">", pos1);
         else if (line[pos1] == '\"')
@@ -572,7 +577,7 @@ Scope *clangimport::AstNode::createScope(TokenList *tokenList, Scope::ScopeType 
     scope->classDef = def;
     scope->check = nestedIn->check;
     scope->bodyStart = addtoken(tokenList, "{");
-    mData->scopeAccessControl[scope] = (scopeType == Scope::ScopeType::eClass) ? AccessControl::Private : AccessControl::Public;
+    mData->scopeAccessControl[scope] = scope->defaultAccess();
     if (!children2.empty()) {
         tokenList->back()->scope(scope);
         for (AstNodePtr astNode: children2) {
@@ -1349,7 +1354,7 @@ Token * clangimport::AstNode::createTokensVarDecl(TokenList *tokenList)
     }
     Token *vartok1 = addtoken(tokenList, name);
     Scope *scope = const_cast<Scope *>(tokenList->back()->scope());
-    scope->varlist.push_back(Variable(vartok1, type, startToken, vartok1->previous(), 0, scope->defaultAccess(), recordType, scope));
+    scope->varlist.push_back(Variable(vartok1, unquote(type), startToken, vartok1->previous(), 0, scope->defaultAccess(), recordType, scope));
     mData->varDecl(addr, vartok1, &scope->varlist.back());
     if (mExtTokens.back() == "cinit" && !children.empty()) {
         Token *eq = addtoken(tokenList, "=");
