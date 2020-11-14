@@ -1245,7 +1245,7 @@ class MisraChecker:
                     if hasExternalLinkage(variable1) or hasExternalLinkage(variable2):
                         continue
                     if (variable1.nameToken.str[:num_sign_chars] == variable2.nameToken.str[:num_sign_chars] and
-                            variable1.Id != variable2.Id):
+                            variable1 is not variable2):
                         if int(variable1.nameToken.linenr) > int(variable2.nameToken.linenr):
                             self.reportError(variable1.nameToken, 5, 2)
                         else:
@@ -1351,7 +1351,7 @@ class MisraChecker:
                     isExplicitlySignedOrUnsigned = True
                     break
 
-                if typeToken.Id == token.variable.typeEndToken.Id:
+                if typeToken is token.variable.typeEndToken:
                     break
 
                 typeToken = typeToken.next
@@ -1383,14 +1383,15 @@ class MisraChecker:
         # Large constant numbers that are assigned to a variable should have an
         # u/U suffix if the variable type is unsigned.
         def reportErrorIfMissingSuffix(variable, value):
+            if 'U' in value.str.upper():
+                return
             if value and value.isNumber:
                 if variable and variable.valueType and variable.valueType.sign == 'unsigned':
                     if variable.valueType.type in ['char', 'short', 'int', 'long', 'long long']:
                         limit = 1 << (bitsOfEssentialType(variable.valueType.type) -1)
-                        for v in value.values:
-                            if v.valueKind == 'known' and v.intvalue >= limit:
-                                if not 'U' in value.str.upper():    
-                                    self.reportError(value, 7, 2)
+                        v = value.getKnownIntValue()
+                        if v is not None and v >= limit:
+                            self.reportError(value, 7, 2)
         
         for token in data.tokenlist:
             # Check normal variable assignment
@@ -1403,7 +1404,7 @@ class MisraChecker:
                 functionDeclaration = token.astOperand1.function
                 
                 if functionDeclaration.tokenDef:
-                    if functionDeclaration.tokenDef.Id == token.astOperand1.Id:
+                    if functionDeclaration.tokenDef is token.astOperand1:
                         # Token is not a function call, but it is the definition of the function
                         continue
 
@@ -1448,7 +1449,7 @@ class MisraChecker:
                 functionDeclaration = token.astOperand1.function
                 
                 if functionDeclaration.tokenDef:
-                    if functionDeclaration.tokenDef.Id == token.astOperand1.Id:
+                    if functionDeclaration.tokenDef is token.astOperand1:
                         # Token is not a function call, but it is the definition of the function
                         continue
 
@@ -1522,6 +1523,41 @@ class MisraChecker:
                     e2_et = getEssentialType(token.astOperand2)
                     if e1_et == 'char' and e2_et == 'char':
                         self.reportError(token, 10, 1)
+
+    def misra_10_2(self, data):
+        def isEssentiallySignedOrUnsigned(op):
+            if op and op.valueType:
+                if op.valueType.sign in ['unsigned', 'signed']:
+                    return True
+            return False 
+
+        def isEssentiallyChar(op):
+            if op.isName:
+                return getEssentialType(op) == 'char'
+            return op.isChar
+
+        for token in data.tokenlist:
+            if not token.isArithmeticalOp or token.str not in ['+', '-']:
+                continue
+
+            operand1 = token.astOperand1
+            operand2 = token.astOperand2
+            if not operand1 or not operand2:
+                continue
+            if not operand1.isChar and not operand2.isChar:
+                continue
+
+            if token.str == '+':
+                if isEssentiallyChar(operand1) and not isEssentiallySignedOrUnsigned(operand2):
+                    self.reportError(token, 10, 2)
+                if isEssentiallyChar(operand2) and not isEssentiallySignedOrUnsigned(operand1):
+                    self.reportError(token, 10, 2)
+
+            if token.str == '-':
+                if not isEssentiallyChar(operand1):
+                    self.reportError(token, 10, 2)
+                if not isEssentiallyChar(operand2) and not isEssentiallySignedOrUnsigned(operand2): 
+                    self.reportError(token, 10, 2)
 
     def misra_10_4(self, data):
         op = {'+', '-', '*', '/', '%', '&', '|', '^', '+=', '-=', ':'}
@@ -1748,9 +1784,8 @@ class MisraChecker:
                     continue
                 if (token.astOperand2.values and vt1.pointer > 0 and
                         vt2.pointer == 0 and token.astOperand2.values):
-                    for val in token.astOperand2.values:
-                        if val.intvalue == 0:
-                            self.reportError(token, 11, 9)
+                    if token.astOperand2.getValue(0):
+                        self.reportError(token, 11, 9)
 
     def misra_12_1_sizeof(self, rawTokens):
         state = 0
@@ -3077,6 +3112,7 @@ class MisraChecker:
                 self.executeCheck(814, self.misra_8_14, data.rawTokens)
                 self.executeCheck(905, self.misra_9_5, data.rawTokens)
             self.executeCheck(1001, self.misra_10_1, cfg)
+            self.executeCheck(1002, self.misra_10_2, cfg)
             self.executeCheck(1004, self.misra_10_4, cfg)
             self.executeCheck(1006, self.misra_10_6, cfg)
             self.executeCheck(1008, self.misra_10_8, cfg)
