@@ -10,7 +10,7 @@
     <long-long>8</long-long>
     <float>4</float>
     <double>4</double>
-    <long-double>8</long-double>
+    <long-double>4</long-double>
     <pointer>2</pointer>
     <size_t>2</size_t>
     <wchar_t>2</wchar_t>
