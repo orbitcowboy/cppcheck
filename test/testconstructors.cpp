@@ -31,11 +31,11 @@ public:
 private:
     Settings settings;
 
-    void check(const char code[], bool showAll = false) {
+    void check(const char code[], bool inconclusive = false) {
         // Clear the error buffer..
         errout.str("");
 
-        settings.inconclusive = showAll;
+        settings.inconclusive = inconclusive;
 
         // Tokenize..
         Tokenizer tokenizer(&settings, this);
@@ -349,15 +349,18 @@ private:
               "};");
         ASSERT_EQUALS("", errout.str());
 
-        check("template <class T> struct A {\n"
-              "    A<T>() : x(0) { }\n"
-              "    A<T>(const T & t) : x(t.x) { }\n"
-              "private:\n"
-              "    int x;\n"
-              "    int y;\n"
-              "};");
-        ASSERT_EQUALS("[test.cpp:2]: (warning) Member variable 'A::y' is not initialized in the constructor.\n"
-                      "[test.cpp:3]: (warning) Member variable 'A::y' is not initialized in the constructor.\n", errout.str());
+        const char code[] = "template <class T> struct A {\n"
+                            "    A<T>() : x(0) { }\n"
+                            "    A<T>(const T & t) : x(t.x) { }\n"
+                            "private:\n"
+                            "    int x;\n"
+                            "    int y;\n"
+                            "};";
+        check(code);
+        ASSERT_EQUALS("", errout.str());
+        check((code + std::string("A<int> a(10);")).c_str());
+        ASSERT_EQUALS("[test.cpp:2]: (warning) Member variable 'A < int >::y' is not initialized in the constructor.\n"
+                      "[test.cpp:3]: (warning) Member variable 'A < int >::y' is not initialized in the constructor.\n", errout.str());
     }
 
     void simple7() { // ticket #4531
