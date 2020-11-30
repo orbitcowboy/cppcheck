@@ -5165,7 +5165,8 @@ void Tokenizer::removeExtraTemplateKeywords()
     }
 }
 
-static std::string getExpression(const Token *tok) {
+static std::string getExpression(const Token *tok)
+{
     std::string line;
     for (const Token *prev = tok->previous(); prev && !Token::Match(prev, "[;{}]"); prev = prev->previous())
         line = prev->str() + " " + line;
@@ -5181,8 +5182,9 @@ void Tokenizer::splitTemplateRightAngleBrackets(bool check)
         // Ticket #6181: normalize C++11 template parameter list closing syntax
         if (tok->str() == "<" && mTemplateSimplifier->templateParameters(tok)) {
             Token *endTok = tok->findClosingBracket();
-            if (check && endTok) {
-                reportError(tok, Severity::debug, "wrongSplitTemplateRightAngleBrackets", "bad closing bracket for !!!<!!!: " + getExpression(tok), false);
+            if (check) {
+                if (Token::Match(endTok, ">>|>>="))
+                    reportError(tok, Severity::debug, "dacaWrongSplitTemplateRightAngleBrackets", "bad closing bracket for !!!<!!!: " + getExpression(tok), false);
                 continue;
             }
             if (endTok && endTok->str() == ">>") {
@@ -5195,8 +5197,9 @@ void Tokenizer::splitTemplateRightAngleBrackets(bool check)
             }
         } else if (Token::Match(tok, "class|struct|union|=|:|public|protected|private %name% <")) {
             Token *endTok = tok->tokAt(2)->findClosingBracket();
-            if (check && endTok) {
-                reportError(tok, Severity::debug, "wrongSplitTemplateRightAngleBrackets", "bad closing bracket for !!!<!!!: " + getExpression(tok), false);
+            if (check) {
+                if (Token::simpleMatch(endTok, ">>"))
+                    reportError(tok, Severity::debug, "dacaWrongSplitTemplateRightAngleBrackets", "bad closing bracket for !!!<!!!: " + getExpression(tok), false);
                 continue;
             }
             if (Token::Match(endTok, ">> ;|{|%type%")) {
