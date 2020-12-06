@@ -1421,6 +1421,27 @@ bool ExprEngine::BinOpResult::isLessThan(ExprEngine::DataBase *dataBase, int val
 #endif
 }
 
+bool ExprEngine::BinOpResult::isTrue(ExprEngine::DataBase *dataBase) const
+{
+#ifdef USE_Z3
+    try {
+        ExprData exprData;
+        z3::solver solver(exprData.context);
+        z3::expr e = exprData.getExpr(this);
+        for (auto constraint : dynamic_cast<const Data *>(dataBase)->constraints)
+            solver.add(exprData.getConstraintExpr(constraint));
+        exprData.addAssertions(solver);
+        return solver.check() == z3::sat;
+    } catch (const z3::exception &exception) {
+        std::cerr << "z3:" << exception << std::endl;
+        return true;  // Safe option is to return true
+    }
+#else
+    (void)dataBase;
+    return false;
+#endif
+}
+
 std::string ExprEngine::BinOpResult::getExpr(ExprEngine::DataBase *dataBase) const
 {
 #ifdef USE_Z3
@@ -1654,6 +1675,10 @@ static void assignExprValue(const Token *expr, ExprEngine::ValuePtr value, Data 
                 if (!loopAssign)
                     arrayValue->assign(indexValue, value);
             }
+        } else {
+            const Token * const indexToken = expr->astOperand2();
+            auto indexValue = executeExpression(indexToken, data);
+            call(data.callbacks, indexToken, indexValue, &data);
         }
     } else if (expr->isUnaryOp("*")) {
         auto pval = executeExpression(expr->astOperand1(), data);
@@ -1703,7 +1728,7 @@ static ExprEngine::ValuePtr executeAssign(const Token *tok, Data &data)
     }
 
     if (!rhsValue)
-        throw ExprEngineException(tok, "Expression '" + tok->expressionString() + "'; Failed to evaluate RHS");
+        rhsValue = std::make_shared<ExprEngine::BailoutValue>();
 
     ExprEngine::ValuePtr assignValue;
     if (tok->str() == "=")
@@ -1851,6 +1876,8 @@ static ExprEngine::ValuePtr executeFunctionCall(const Token *tok, Data &data)
                 data.assignValue(argtok, addressOf->varId, getValueRangeFromValueType(&vt, data));
         }
     }
+
+    call(data.callbacks, tok, std::make_shared<ExprEngine::FunctionCallArgumentValues>(argValues), &data);
 
     if (tok->astOperand1()->function()) {
         const Function *function = tok->astOperand1()->function();
@@ -2486,6 +2513,7 @@ static std::string execute(const Token *start, const Token *end, Data &data)
                     data.assignValue(tok2, varid, getValueRangeFromValueType(vartok->valueType(), data));
                 }
             }
+            tok = tok->linkAt(1);
         }
 
         if (Token::simpleMatch(tok, "} else {"))
@@ -2725,6 +2753,20 @@ static void dumpRecursive(ExprEngine::ValuePtr val)
     case ExprEngine::ValueType::FloatRange:
         std::cout << "FloatRange";
         break;
+    case ExprEngine::ValueType::FunctionCallArgumentValues: {
+        std::cout << "FunctionCallArgumentValues(";
+        const char *sep = "";
+        for (auto arg: std::dynamic_pointer_cast<ExprEngine::FunctionCallArgumentValues>(val)->argValues) {
+            std::cout << sep;
+            sep = ",";
+            if (!arg)
+                std::cout << "NULL";
+            else
+                dumpRecursive(arg);
+        }
+        std::cout << ")";
+    }
+    break;
     case ExprEngine::ValueType::IntRange:
         std::cout << "IntRange";
         break;
