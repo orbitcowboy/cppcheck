@@ -38,6 +38,8 @@ private:
         TEST_CASE(checkAssignment);
         TEST_CASE(arrayIndexOutOfBounds1);
         TEST_CASE(arrayIndexOutOfBounds2);
+        TEST_CASE(arrayIndexOutOfBounds3);
+        TEST_CASE(arrayIndexOutOfBounds4);
         TEST_CASE(bufferOverflowMemCmp1);
         TEST_CASE(bufferOverflowMemCmp2);
         TEST_CASE(bufferOverflowStrcpy1);
@@ -83,7 +85,7 @@ private:
                       errout.str());
     }
 
-    void arrayIndexOutOfBounds2() {
+    void arrayIndexOutOfBounds2() { // loop
         check("void foo(int n) {\n"
               "  int p[8];\n"
               "  for (int i = 0; i < n; i++)\n"
@@ -103,6 +105,33 @@ private:
               "}");
         ASSERT_EQUALS("[test.cpp:6]: (error) Array index out of bounds, cannot determine that i is less than 8\n"
                       "[test.cpp:6]: (error) Array index out of bounds, cannot determine that i is not negative\n",
+                      errout.str());
+    }
+
+    void arrayIndexOutOfBounds3() { // struct
+        check("struct S { int x; };\n"
+              "void foo(short i) {\n"
+              "  S s[8];\n"
+              "  if (s[i].x == 0) {}\n"
+              "}");
+        ASSERT_EQUALS("[test.cpp:4]: (error) Array index out of bounds, cannot determine that i is less than 8\n"
+                      "[test.cpp:4]: (error) Array index out of bounds, cannot determine that i is not negative\n"
+                      "[test.cpp:4]: (error) Cannot determine that 's[i]' is initialized\n",
+                      errout.str());
+    }
+
+    void arrayIndexOutOfBounds4() { // ensure there are warnings for bailout value
+        check("void foo(short i) {\n"
+              "    int buf[8];\n"
+              "\n"
+              "    data *d = x;\n"
+              "    switch (d->layout) { case 0: break; }\n"
+              "\n"
+              "    if (buf[i] > 0) {}\n"
+              "}");
+        ASSERT_EQUALS("[test.cpp:7]: (error) Array index out of bounds, cannot determine that i is less than 8\n"
+                      "[test.cpp:7]: (error) Array index out of bounds, cannot determine that i is not negative\n"
+                      "[test.cpp:7]: (error) Cannot determine that 'buf[i]' is initialized\n",
                       errout.str());
     }
 
