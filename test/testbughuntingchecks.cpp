@@ -207,7 +207,7 @@ private:
         // constant parameters should point at initialized data
 
         check("char foo(char id[]) { return id[0]; }");
-        ASSERT_EQUALS("[test.cpp:1]: (error) Cannot determine that 'id[0]' is initialized\n", errout.str());
+        ASSERT_EQUALS("[test.cpp:1]: (error) Cannot determine that 'id[0]' is initialized (you can use 'const' to say data must be initialized)\n", errout.str());
 
         check("char foo(const char id[]) { return id[0]; }");
         ASSERT_EQUALS("", errout.str());
@@ -221,6 +221,15 @@ private:
         ASSERT_EQUALS("[test.cpp:2]: (error, inconclusive) Cannot determine that 'data[0]' is initialized. It is inconclusive if there would be a problem in the function call.\n", errout.str());
 
         check("void foo(int *p) { if (p) *p=0; }");
+        ASSERT_EQUALS("", errout.str());
+
+        check("class C {\n"
+              "public:\n"
+              "  C();\n"
+              "  int x;\n"
+              "};\n"
+              "\n"
+              "void foo(const C &c) { int x = c.x; }");
         ASSERT_EQUALS("", errout.str());
     }
 
