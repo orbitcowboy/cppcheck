@@ -268,7 +268,7 @@ namespace {
             if (tok->index() == 0)
                 return;
             const std::string &symbolicExpression = value->getSymbolicExpression();
-            if (symbolicExpression[0] != '$')
+            if (std::isdigit(symbolicExpression[0]) || value->type == ExprEngine::ValueType::BinOpResult || value->type == ExprEngine::ValueType::UninitValue)
                 return;
             if (mSymbols.find(symbolicExpression) != mSymbols.end())
                 return;
@@ -1952,6 +1952,11 @@ static ExprEngine::ValuePtr executeFunctionCall(const Token *tok, Data &data)
 
     bool hasBody = tok->astOperand1()->function() && tok->astOperand1()->function()->hasBody();
     if (hasBody) {
+        const Scope *functionScope = tok->scope();
+        while (functionScope->isExecutable() && functionScope->type != Scope::ScopeType::eFunction)
+            functionScope = functionScope->nestedIn;
+        if (functionScope == tok->astOperand1()->function()->functionScope)
+            hasBody = false;
         for (const auto &errorPathItem: data.errorPath) {
             if (errorPathItem.first == tok) {
                 hasBody = false;
@@ -2262,6 +2267,17 @@ static ExprEngine::ValuePtr executeDeref(const Token *tok, Data &data)
     return ExprEngine::ValuePtr();
 }
 
+static ExprEngine::ValuePtr executeNot(const Token *tok, Data &data)
+{
+    ExprEngine::ValuePtr v = executeExpression(tok->astOperand1(), data);
+    if (!v)
+        return v;
+    ExprEngine::ValuePtr zero = std::make_shared<ExprEngine::IntRange>("0", 0, 0);
+    auto result = simplifyValue(std::make_shared<ExprEngine::BinOpResult>("==", v, zero));
+    call(data.callbacks, tok, result, &data);
+    return result;
+}
+
 static ExprEngine::ValuePtr executeVariable(const Token *tok, Data &data)
 {
     auto val = data.getValue(tok->varId(), tok->valueType(), tok);
@@ -2340,6 +2356,9 @@ static ExprEngine::ValuePtr executeExpression1(const Token *tok, Data &data)
     if (tok->isUnaryOp("*"))
         return executeDeref(tok, data);
 
+    if (tok->isUnaryOp("!"))
+        return executeNot(tok, data);
+
     if (tok->varId())
         return executeVariable(tok, data);
 
@@ -2382,8 +2401,16 @@ static std::string execute(const Token *start, const Token *end, Data &data)
     Recursion updateRecursion(&data.recursion, data.recursion);
 
     for (const Token *tok = start; tok != end; tok = tok->next()) {
-        if (Token::Match(tok, "[;{}]"))
+        if (Token::Match(tok, "[;{}]")) {
             data.trackProgramState(tok);
+            if (tok->str() == ";") {
+                const Token *prev = tok->previous();
+                while (prev && !Token::Match(prev, "[;{}]"))
+                    prev = prev->previous();
+                if (Token::Match(prev, "[;{}] return|throw"))
+                    return data.str();
+            }
+        }
 
         if (Token::simpleMatch(tok, "__CPPCHECK_BAILOUT__ ;"))
             // This is intended for testing
@@ -2598,8 +2625,19 @@ static std::string execute(const Token *start, const Token *end, Data &data)
                         if (!structVal1)
                             structVal1 = createVariableValue(*structToken->variable(), data);
                         auto structVal = std::dynamic_pointer_cast<ExprEngine::StructValue>(structVal1);
-                        if (!structVal)
-                            throw ExprEngineException(tok2, "Unhandled assignment in loop");
+                        if (!structVal) {
+                            // Handle pointer to a struct
+                            if (auto structPtr = std::dynamic_pointer_cast<ExprEngine::ArrayValue>(structVal1)) {
+                                if (structPtr->pointer && !structPtr->data.empty()) {
+                                    auto indexValue = std::make_shared<ExprEngine::IntRange>("0", 0, 0);
+                                    for (auto val: structPtr->read(indexValue)) {
+                                        structVal = std::dynamic_pointer_cast<ExprEngine::StructValue>(val.second);
+                                    }
+                                }
+                            }
+                            if (!structVal)
+                                throw ExprEngineException(tok2, "Unhandled assignment in loop");
+                        }
 
                         data.assignStructMember(tok2, &*structVal, memberName, memberValue);
                         continue;
@@ -2788,7 +2826,7 @@ void ExprEngine::executeFunction(const Scope *functionScope, ErrorLogger *errorL
         execute(functionScope->bodyStart, functionScope->bodyEnd, data);
     } catch (const ExprEngineException &e) {
         if (settings->debugBugHunting)
-            report << "ExprEngineException tok.line:" << e.tok->linenr() << " what:" << e.what << "\n";
+            report << "ExprEngineException " << e.tok->linenr() << ":" << e.tok->column() << ": " << e.what << "\n";
         trackExecution.setAbortLine(e.tok->linenr());
         auto bailoutValue = std::make_shared<BailoutValue>();
         for (const Token *tok = e.tok; tok != functionScope->bodyEnd; tok = tok->next()) {
