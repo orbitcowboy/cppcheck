@@ -87,6 +87,7 @@ private:
         TEST_CASE(array6);
         TEST_CASE(arrayInit1);
         TEST_CASE(arrayInit2);
+        TEST_CASE(arrayInit3);
         TEST_CASE(arrayUninit);
         TEST_CASE(arrayInLoop);
 
@@ -98,6 +99,7 @@ private:
         TEST_CASE(functionCall2);
         TEST_CASE(functionCall3);
         TEST_CASE(functionCall4);
+        TEST_CASE(functionCall5);
 
         TEST_CASE(functionCallContract1);
 
@@ -614,8 +616,8 @@ private:
     }
 
     void array2() {
-        ASSERT_EQUALS("(and (>= |$3:4| 0) (<= |$3:4| 255))\n"
-                      "(= |$3:4| 365)\n"
+        ASSERT_EQUALS("(and (>= |$4:4| 0) (<= |$4:4| 255))\n"
+                      "(= |$4:4| 365)\n"
                       "z3::unsat\n",
                       expr("void dostuff(unsigned char *); int f() { unsigned char arr[10] = \"\"; dostuff(arr); return arr[4] == 365; }", "=="));
     }
@@ -671,6 +673,10 @@ private:
         ASSERT_EQUALS("66", getRange("void f() { char str[] = \"hello\"; str[0] = \'B\'; }", "str[0]=\'B\'"));
     }
 
+    void arrayInit3() {
+        ASSERT_EQUALS("-32768:32767", getRange("void f() { short buf[5] = {2, 1, 0, 3, 4}; ret = buf[2]; }", "buf[2]"));
+    }
+
     void arrayUninit() {
         ASSERT_EQUALS("?", getRange("int f() { int arr[10]; return arr[4]; }", "arr[4]"));
     }
@@ -722,6 +728,14 @@ private:
 
     void functionCall4() {
         ASSERT_EQUALS("1:2147483647", getRange("void f() { sizeof(data); }", "sizeof(data)"));
+    }
+
+    void functionCall5() { // unknown result from function, pointer type..
+        ASSERT_EQUALS("1:36: $3=ArrayValue([$2],[:]=bailout,null)\n"
+                      "1:36: $2=IntRange(1:2147483647)\n"
+                      "1:36: bailout=BailoutValue(bailout)\n"
+                      "1:46: 0:memory:{p=($3,[$2],[:]=bailout)}\n",
+                      trackExecution("char *foo(int); void bar() { char *p = foo(1); }"));
     }
 
     void functionCallContract1() {

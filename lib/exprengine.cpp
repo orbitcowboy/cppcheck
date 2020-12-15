@@ -891,8 +891,12 @@ ExprEngine::ArrayValue::ArrayValue(DataBase *data, const Variable *var)
         size.push_back(std::make_shared<ExprEngine::IntRange>(data->getNewSymbolName(), 1, ExprEngine::ArrayValue::MAXSIZE));
     }
 
+    const Token *initToken = var ? var->nameToken() : nullptr;
+    while (initToken && initToken->str() != "=")
+        initToken = initToken->astParent();
+
     ValuePtr val;
-    if (var && !var->isGlobal() && !var->isStatic() && !(var->isArgument() && var->isConst()))
+    if (var && !var->isGlobal() && !var->isStatic() && !(var->isArgument() && var->isConst()) && !initToken)
         val = std::make_shared<ExprEngine::UninitValue>();
     else if (var && var->valueType()) {
         ::ValueType vt(*var->valueType());
@@ -1635,6 +1639,12 @@ static ExprEngine::ValuePtr getValueRangeFromValueType(const std::string &name, 
 
 static ExprEngine::ValuePtr getValueRangeFromValueType(const ValueType *valueType, Data &data)
 {
+    if (valueType && valueType->pointer) {
+        ExprEngine::ValuePtr val = std::make_shared<ExprEngine::BailoutValue>();
+        auto bufferSize = std::make_shared<ExprEngine::IntRange>(data.getNewSymbolName(), 1, ExprEngine::ArrayValue::MAXSIZE);
+        return std::make_shared<ExprEngine::ArrayValue>(data.getNewSymbolName(), bufferSize, val, true, true, false);
+    }
+
     if (!valueType || valueType->pointer)
         return ExprEngine::ValuePtr();
     if (valueType->container) {
@@ -1837,10 +1847,9 @@ static ExprEngine::ValuePtr executeAssign(const Token *tok, Data &data)
             if (rhsValue)
                 call(data.callbacks, tok->astOperand2(), rhsValue, &data);
         }
+        if (!rhsValue)
+            rhsValue = std::make_shared<ExprEngine::BailoutValue>();
     }
-
-    if (!rhsValue)
-        rhsValue = std::make_shared<ExprEngine::BailoutValue>();
 
     ExprEngine::ValuePtr assignValue;
     if (tok->str() == "=")
