@@ -929,6 +929,16 @@ void ExprEngine::ArrayValue::assign(ExprEngine::ValuePtr index, ExprEngine::Valu
     if (!index)
         data.clear();
     if (value) {
+        if (index) {
+            // Remove old item that will be "overwritten"
+            for (size_t i = 0; i < data.size(); ++i) {
+                if (data[i].index && data[i].index->name == index->name) {
+                    data.erase(data.begin() + i);
+                    break;
+                }
+            }
+        }
+
         ExprEngine::ArrayValue::IndexAndValue indexAndValue = {index, value};
         data.push_back(indexAndValue);
     }
@@ -2113,7 +2123,7 @@ static ExprEngine::ValuePtr executeCast(const Token *tok, Data &data)
 
         ::ValueType vt(*tok->valueType());
         vt.pointer = 0;
-        auto range = getValueRangeFromValueType(&vt, data);
+        auto range = std::make_shared<ExprEngine::UninitValue>();
 
         if (tok->valueType()->pointer == 0)
             return range;

@@ -85,6 +85,7 @@ private:
         TEST_CASE(array4);
         TEST_CASE(array5);
         TEST_CASE(array6);
+        TEST_CASE(array7);
         TEST_CASE(arrayInit1);
         TEST_CASE(arrayInit2);
         TEST_CASE(arrayInit3);
@@ -107,6 +108,7 @@ private:
 
         TEST_CASE(pointer1);
         TEST_CASE(pointer2);
+        TEST_CASE(pointer3);
         TEST_CASE(pointerAlias1);
         TEST_CASE(pointerAlias2);
         TEST_CASE(pointerAlias3);
@@ -665,6 +667,19 @@ private:
                       expr(code, "=="));
     }
 
+    void array7() {
+        const char code[] = "void foo(unsigned char *x) {\n"
+                            "  *x = 2;\n"
+                            "  *x = 1;\n"
+                            "}";
+        ASSERT_EQUALS("1:28: $2=ArrayValue([$1],[:]=?,null)\n"
+                      "1:28: $1=IntRange(1:ffffffffffffffff)\n"
+                      "1:28: 0:memory:{x=($2,[$1],[:]=?)}\n"
+                      "2:9: 0:memory:{x=($2,[$1],[:]=?,[0]=2)}\n"
+                      "3:9: 0:memory:{x=($2,[$1],[:]=?,[0]=1)}\n",
+                      trackExecution(code));
+    }
+
     void arrayInit1() {
         ASSERT_EQUALS("0", getRange("inf f() { char arr[10] = \"\"; return arr[4]; }", "arr[4]"));
     }
@@ -778,6 +793,15 @@ private:
                       "(= $3 7)\n"
                       "z3::sat\n",
                       expr(code, "=="));
+    }
+
+    void pointer3() {
+        const char code[] = "void f(void *p) {\n"
+                            "    double *data = (double *)p;\n"
+                            "    return *data;"
+                            "}";
+        ASSERT_EQUALS("[$1],[:]=?,null", getRange(code, "p"));
+        ASSERT_EQUALS("[$4],[:]=?,null", getRange(code, "data"));
     }
 
     void pointerAlias1() {
