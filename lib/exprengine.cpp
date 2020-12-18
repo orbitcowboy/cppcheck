@@ -2121,8 +2121,6 @@ static ExprEngine::ValuePtr executeCast(const Token *tok, Data &data)
         if (!tok->valueType() || expr->valueType()->pointer < tok->valueType()->pointer)
             return std::make_shared<ExprEngine::UninitValue>();
 
-        ::ValueType vt(*tok->valueType());
-        vt.pointer = 0;
         auto range = std::make_shared<ExprEngine::UninitValue>();
 
         if (tok->valueType()->pointer == 0)
@@ -2430,6 +2428,8 @@ static std::string execute(const Token *start, const Token *end, Data &data)
     };
     Recursion updateRecursion(&data.recursion, data.recursion);
 
+    const std::time_t stopTime = data.startTime + data.settings->bugHuntingCheckFunctionMaxTime;
+
     for (const Token *tok = start; tok != end; tok = tok->next()) {
         if (Token::Match(tok, "[;{}]")) {
             data.trackProgramState(tok);
@@ -2440,6 +2440,8 @@ static std::string execute(const Token *start, const Token *end, Data &data)
                 if (Token::Match(prev, "[;{}] return|throw"))
                     return data.str();
             }
+            if (std::time(nullptr) > stopTime)
+                return "";
         }
 
         if (Token::simpleMatch(tok, "__CPPCHECK_BAILOUT__ ;"))
@@ -2852,6 +2854,8 @@ void ExprEngine::executeFunction(const Scope *functionScope, ErrorLogger *errorL
 
     data.contractConstraints(function, executeExpression1);
 
+    const std::time_t stopTime = data.startTime + data.settings->bugHuntingCheckFunctionMaxTime;
+
     try {
         execute(functionScope->bodyStart, functionScope->bodyEnd, data);
     } catch (const ExprEngineException &e) {
@@ -2860,6 +2864,8 @@ void ExprEngine::executeFunction(const Scope *functionScope, ErrorLogger *errorL
         trackExecution.setAbortLine(e.tok->linenr());
         auto bailoutValue = std::make_shared<BailoutValue>();
         for (const Token *tok = e.tok; tok != functionScope->bodyEnd; tok = tok->next()) {
+            if (std::time(nullptr) >= stopTime)
+                break;
             if (Token::Match(tok, "return|throw|while|if|for (")) {
                 tok = tok->next();
                 continue;
