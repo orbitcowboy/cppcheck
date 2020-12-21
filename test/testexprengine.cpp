@@ -65,6 +65,8 @@ private:
         TEST_CASE(ifelse1);
         TEST_CASE(ifif);
         TEST_CASE(ifreturn);
+        TEST_CASE(ifIntRangeAlwaysFalse);
+        TEST_CASE(ifIntRangeAlwaysTrue);
 
         TEST_CASE(istream);
 
@@ -103,7 +105,6 @@ private:
         TEST_CASE(functionCall5);
 
         TEST_CASE(functionCallContract1);
-        TEST_CASE(functionCallContract2);
 
         TEST_CASE(int1);
 
@@ -488,6 +489,40 @@ private:
                       expr(code, "=="));
     }
 
+    void ifIntRangeAlwaysFalse() {
+        const char code[] = "void foo(unsigned char x) {\n"
+                            "  if (x > 0)\n"
+                            "      return;\n"
+                            "  if (x) {\n"  // <-- condition should be "always false".
+                            "      x++;\n"
+                            "  }\n"
+                            "  return x == 0;\n" // <- sat
+                            "}";
+        ASSERT_EQUALS("(<= $1 0)\n"
+                      "(= $1 0)\n"
+                      "(and (>= $1 0) (<= $1 255))\n"
+                      "(= $1 0)\n"
+                      "z3::sat\n",
+                      expr(code, "=="));
+    }
+
+    void ifIntRangeAlwaysTrue() {
+        const char code[] = "void foo(unsigned char x) {\n"
+                            "  if (x < 1)\n"
+                            "      return;\n"
+                            "  if (x) {\n"  // <-- condition should be "always true".
+                            "      x++;\n"
+                            "  }\n"
+                            "  return x == 0;\n" // <- unsat
+                            "}";
+        ASSERT_EQUALS("(>= $1 1)\n"
+                      "(distinct $1 0)\n"
+                      "(and (>= $1 0) (<= $1 255))\n"
+                      "(= (+ $1 1) 0)\n"
+                      "z3::unsat\n",
+                      expr(code, "=="));
+    }
+
     void istream() {
         const char code[] = "void foo(const std::string& in) {\n"
                             "    std::istringstream istr(in);\n"
@@ -716,8 +751,8 @@ private:
     }
 
     void floatValue3() {
-        const char code[] = "void foo(float f) { return f > 12.3; }";
-        const char expected[] = "(> $1 (/ 123.0 10.0))\n"
+        const char code[] = "void foo(float f) { return f > 12.0; }";
+        const char expected[] = "(> $1 |12.0|)\n"
                                 "z3::sat\n";
         ASSERT_EQUALS(expected, expr(code, ">"));
     }
@@ -766,19 +801,6 @@ private:
                       "(= $2 $1)\n"
                       "(and (>= $2 (- 2147483648)) (<= $2 2147483647))\n"
                       "(and (>= $1 0) (<= $1 65535))\n"
-                      "}\n",
-                      functionCallContractExpr(code, s));
-    }
-
-    void functionCallContract2() {
-        const char code[] = "void foo(float x);\n"
-                            "void bar(float x) { foo(x); }";
-
-        Settings s;
-        s.functionContracts["foo(x)"] = "x >= 0.5";
-
-        ASSERT_EQUALS("checkContract:{\n"
-                      "(ite (>= $2 (/ 1.0 2.0)) false true)\n"
                       "}\n",
                       functionCallContractExpr(code, s));
     }
