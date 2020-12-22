@@ -595,6 +595,10 @@ namespace {
                 if (!binop.empty())
                     return std::make_shared<ExprEngine::BinOpResult>(binop, b->op1, b->op2);
             }
+            if (std::dynamic_pointer_cast<ExprEngine::FloatRange>(v)) {
+                auto zero = std::make_shared<ExprEngine::FloatRange>("0.0", 0.0, 0.0);
+                return std::make_shared<ExprEngine::BinOpResult>("==", v, zero);
+            }
             auto zero = std::make_shared<ExprEngine::IntRange>("0", 0, 0);
             return std::make_shared<ExprEngine::BinOpResult>("==", v, zero);
         }
@@ -1142,11 +1146,7 @@ public:
     }
 
     z3::expr addFloat(const std::string &name) {
-#if Z3_VERSION_INT >= GET_VERSION_INT(4,8,0)
-        z3::expr e = context.fpa_const(name.c_str(), 11, 53);
-#else
-        z3::expr e = context.real_const(name.c_str());
-#endif
+        z3::expr e = z3_fp_const(name);
         valueExpr.emplace(name, e);
         return e;
     }
@@ -1199,11 +1199,7 @@ public:
             throw BailoutValueException();
         if (auto intRange = std::dynamic_pointer_cast<ExprEngine::IntRange>(v)) {
             if (intRange->name[0] != '$')
-#if Z3_VERSION_INT >= GET_VERSION_INT(4,7,1)
-                return context.int_val(int64_t(intRange->minValue));
-#else
-                return context.int_val((long long)(intRange->minValue));
-#endif
+                return z3_int_val(intRange->minValue);
             auto it = valueExpr.find(v->name);
             if (it != valueExpr.end())
                 return it->second;
@@ -1211,6 +1207,9 @@ public:
         }
 
         if (auto floatRange = std::dynamic_pointer_cast<ExprEngine::FloatRange>(v)) {
+            if (floatRange->name[0] != '$')
+                return z3_fp_val(floatRange->minValue, floatRange->name);
+
             auto it = valueExpr.find(v->name);
             if (it != valueExpr.end())
                 return it->second;
@@ -1253,6 +1252,11 @@ public:
     z3::expr bool_expr(z3::expr e) {
         if (e.is_bool())
             return e;
+
+        // Workaround for z3 bug: https://github.com/Z3Prover/z3/issues/4905
+        if (z3_is_fp(e))
+            return e != z3_fp_val(0.0, "0.0");
+
         return e != 0;
     }
 
@@ -1260,6 +1264,44 @@ public:
         if (e.is_bool())
             return z3::ite(e, context.int_val(1), context.int_val(0));
         return e;
+    }
+
+    // Wrapper functions for Z3 interface. Instead of having ifdefs embedded
+    // in the code we have wrapper functions with ifdefs. The code that use
+    // these will be cleaner and hopefully more robust.
+
+    z3::expr z3_fp_const(const std::string &name) {
+#if Z3_VERSION_INT >= GET_VERSION_INT(4,8,0)
+        return context.fpa_const(name.c_str(), 11, 53);
+#else
+        return context.real_const(name.c_str());
+#endif
+    }
+
+    z3::expr z3_fp_val(long double value, const std::string &name) {
+#if Z3_VERSION_INT >= GET_VERSION_INT(4,8,0)
+        (void)name;
+        return context.fpa_val(static_cast<double>(value));
+#else
+        (void)value;
+        return context.real_val(name.c_str());
+#endif
+    }
+
+    bool z3_is_fp(z3::expr e) const {
+#if Z3_VERSION_INT >= GET_VERSION_INT(4,8,0)
+        return e.is_fpa();
+#else
+        return e.is_real();
+#endif
+    }
+
+    z3::expr z3_int_val(int128_t value) {
+#if Z3_VERSION_INT >= GET_VERSION_INT(4,7,1)
+        return context.int_val(int64_t(value));
+#else
+        return context.int_val((long long)(value));
+#endif
     }
 };
 #endif
@@ -1377,7 +1419,13 @@ bool ExprEngine::FloatRange::isEqual(DataBase *dataBase, int value) const
         z3::expr e = exprData.addFloat(name);
         exprData.addConstraints(solver, data);
         exprData.addAssertions(solver);
-        solver.add(e >= value && e <= value);
+        // Workaround for z3 bug: https://github.com/Z3Prover/z3/issues/4905
+#if Z3_VERSION_INT >= GET_VERSION_INT(4,8,0)
+        z3::expr val_e = exprData.context.fpa_val(static_cast<double>(value));
+#else
+        z3::expr val_e = exprData.context.real_val(value);
+#endif // Z3_VERSION_INT
+        solver.add(e == val_e);
         return solver.check() != z3::unsat;
     } catch (const z3::exception &exception) {
         std::cerr << "z3: " << exception << std::endl;
