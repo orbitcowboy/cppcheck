@@ -15,7 +15,7 @@ import shlex
 # Version scheme (MAJOR.MINOR.PATCH) should orientate on "Semantic Versioning" https://semver.org/
 # Every change in this script should result in increasing the version number accordingly (exceptions may be cosmetic
 # changes)
-CLIENT_VERSION = "1.3.2"
+CLIENT_VERSION = "1.3.3"
 
 # Timeout for analysis with Cppcheck in seconds
 CPPCHECK_TIMEOUT = 60 * 60
@@ -484,6 +484,7 @@ def get_libraries():
                        'sdl': ['<SDL.h>', '<SDL/SDL.h>', '<SDL2/SDL.h>'],
                        'sqlite3': ['<sqlite3.h>', '"sqlite3.h"'],
                        'tinyxml2': ['<tinyxml2', '"tinyxml2'],
+                       'wxsqlite3': ['<wx/wxsqlite3', '"wx/wxsqlite3'],
                        'wxwidgets': ['<wx/', '"wx/'],
                        'zlib': ['<zlib.h>'],
                       }
