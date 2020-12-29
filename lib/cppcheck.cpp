@@ -350,6 +350,8 @@ unsigned int CppCheck::check(const std::string &path)
         if (!mSettings.buildDir.empty()) {
             std::ofstream fout(clangcmd);
             fout << exe << " " << args2 << " " << redirect2 << std::endl;
+        } else if (mSettings.verbose && !mSettings.quiet) {
+            mErrorLogger.reportOut(exe + " " + args2);
         }
 
         std::string output2;
@@ -417,7 +419,7 @@ unsigned int CppCheck::check(const ImportProject::FileSettings &fs)
         temp.mSettings.platform(fs.platformType);
     if (mSettings.clang) {
         temp.mSettings.includePaths.insert(temp.mSettings.includePaths.end(), fs.systemIncludePaths.cbegin(), fs.systemIncludePaths.cend());
-        temp.check(Path::simplifyPath(fs.filename));
+        return temp.check(Path::simplifyPath(fs.filename));
     }
     std::ifstream fin(fs.filename);
     unsigned int returnValue = temp.checkFile(Path::simplifyPath(fs.filename), fs.cfg, fin);
