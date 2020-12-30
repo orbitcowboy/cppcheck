@@ -497,6 +497,9 @@ const ::Type * clangimport::AstNode::addTypeTokens(TokenList *tokenList, const s
         return addTypeTokens(tokenList, str.substr(0, str.find("\':\'") + 1), scope);
     }
 
+    if (str.compare(0, 16, "'enum (anonymous") == 0)
+        return nullptr;
+
     std::string type;
     if (str.find(" (") != std::string::npos) {
         if (str.find("<") != std::string::npos)
@@ -1519,6 +1522,12 @@ void clangimport::parseClangAstDump(Tokenizer *tokenizer, std::istream &f)
 
     if (!tree.empty())
         tree[0]->createTokens1(tokenList);
+
+    // Validation
+    for (const Token *tok = tokenList->front(); tok; tok = tok->next()) {
+        if (Token::Match(tok, "(|)|[|]|{|}") && !tok->link())
+            throw InternalError(tok, "Token::link() is not set properly");
+    }
 
     symbolDatabase->clangSetVariables(data.getVariableList());
     tokenList->clangSetOrigFiles();
