@@ -81,6 +81,7 @@ private:
         TEST_CASE(funcdecl3);
         TEST_CASE(funcdecl4);
         TEST_CASE(funcdecl5);
+        TEST_CASE(funcdecl6);
         TEST_CASE(functionTemplateDecl1);
         TEST_CASE(functionTemplateDecl2);
         TEST_CASE(initListExpr);
@@ -104,6 +105,7 @@ private:
         TEST_CASE(vardecl4);
         TEST_CASE(vardecl5);
         TEST_CASE(vardecl6);
+        TEST_CASE(vardecl7);
         TEST_CASE(whileStmt1);
         TEST_CASE(whileStmt2);
 
@@ -763,6 +765,12 @@ private:
         ASSERT_EQUALS("static inline void foo ( ) ;", parse(clang));
     }
 
+    void funcdecl6() {
+        const char clang[] = "`-FunctionDecl 0x196eea8 <1.cpp:3:5, col:27> col:12 foo 'void **(int)'\n"
+                             "  `-ParmVarDecl 0x196eda0 <col:17, col:21> col:21 count 'int'";
+        ASSERT_EQUALS("void * * foo ( int count@1 ) ;", parse(clang));
+    }
+
     void functionTemplateDecl1() {
         const char clang[] = "`-FunctionTemplateDecl 0x3242860 <a.cpp:1:1, col:46> col:21 foo";
         ASSERT_EQUALS("", parse(clang));
@@ -990,6 +998,11 @@ private:
         const char clang[] = "`-VarDecl 0x278e170 <1.c:1:1, col:16> col:12 x 'int' static cinit\n"
                              "  `-IntegerLiteral 0x278e220 <col:16> 'int' 3";
         ASSERT_EQUALS("static int x@1 = 3 ;", parse(clang));
+    }
+
+    void vardecl7() {
+        const char clang[] = "`-VarDecl 0x2071f20 <1.cpp:2:1, col:23> col:9 start 'void *(*)(void *)'";
+        ASSERT_EQUALS("void * * start@1 ;", parse(clang));
     }
 
     void whileStmt1() {
