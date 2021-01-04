@@ -702,7 +702,7 @@ static bool areAllParamsTypes(const std::vector<const Token *> &params)
     if (params.empty())
         return false;
 
-    for (auto param : params) {
+    for (const auto *param : params) {
         if (!Token::Match(param->previous(), "typename|class %name% ,|>"))
             return false;
     }
@@ -1509,7 +1509,7 @@ void TemplateSimplifier::addNamespace(const TokenAndName &templateDeclaration, c
 
 bool TemplateSimplifier::alreadyHasNamespace(const TokenAndName &templateDeclaration, const Token *tok)
 {
-    std::string scope = templateDeclaration.scope();
+    const std::string& scope = templateDeclaration.scope();
 
     // get the length in tokens of the namespace
     std::string::size_type pos = 0;

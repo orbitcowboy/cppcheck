@@ -2243,10 +2243,10 @@ bool Tokenizer::simplifyUsing()
                                 std::string::size_type spaceIdx = 0;
                                 std::string::size_type startIdx = 0;
                                 while ((spaceIdx = removed1.find(" ", startIdx)) != std::string::npos) {
-                                    tok1->previous()->insertToken(removed1.substr(startIdx, spaceIdx - startIdx).c_str());
+                                    tok1->previous()->insertToken(removed1.substr(startIdx, spaceIdx - startIdx));
                                     startIdx = spaceIdx + 1;
                                 }
-                                tok1->previous()->insertToken(removed1.substr(startIdx).c_str());
+                                tok1->previous()->insertToken(removed1.substr(startIdx));
                                 tok1->previous()->insertToken("::");
                                 break;
                             }
@@ -5170,7 +5170,7 @@ void Tokenizer::simplifyHeadersAndUnusedTemplates()
         if (!tok->previous() || Token::Match(tok->previous(), "[;{}]")) {
             // Remove unused function declarations
             if (isIncluded && removeUnusedIncludedFunctions) {
-                while (1) {
+                while (true) {
                     Token *start = tok;
                     while (start && functionStart.find(start->str()) != functionStart.end())
                         start = start->next();
@@ -5255,7 +5255,7 @@ void Tokenizer::splitTemplateRightAngleBrackets(bool check)
             vars.insert(tok->strAt(2));
 
         // Ticket #6181: normalize C++11 template parameter list closing syntax
-        if (tok->previous() && tok->str() == "<" && mTemplateSimplifier->templateParameters(tok) && vars.find(tok->previous()->str()) == vars.end()) {
+        if (tok->previous() && tok->str() == "<" && TemplateSimplifier::templateParameters(tok) && vars.find(tok->previous()->str()) == vars.end()) {
             Token *endTok = tok->findClosingBracket();
             if (check) {
                 if (Token::Match(endTok, ">>|>>="))
@@ -9856,7 +9856,7 @@ void Tokenizer::findGarbageCode() const
                 syntaxError(tok);
         }
         if (Token::Match(tok, "%or%|%oror%|~|^|!|%comp%|+|-|/|%")) {
-            std::string code = "";
+            std::string code;
             if (Token::Match(tok->next(), ")|]|}"))
                 code = tok->str() + tok->next()->str();
             if (Token::simpleMatch(tok->next(), "( )"))
