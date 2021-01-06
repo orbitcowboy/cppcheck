@@ -854,6 +854,9 @@ void SymbolDatabase::createSymbolDatabaseNeedInitialization()
             unknowns = 0;
 
             for (Scope& scope : scopeList) {
+                if (!scope.isClassOrStructOrUnion())
+                    continue;
+
                 if (!scope.definedType) {
                     mBlankTypes.emplace_back();
                     scope.definedType = &mBlankTypes.back();
@@ -2443,10 +2446,16 @@ bool Function::argsMatch(const Scope *scope, const Token *first, const Token *se
         }
 
         // const after *
-        else if (first->next()->str() == "*" && first->strAt(2) != "const" &&
-                 second->next()->str() == "*" && second->strAt(2) == "const") {
-            first = first->next();
-            second = second->tokAt(2);
+        else if (first->next()->str() == "*" && second->next()->str() == "*" &&
+                 ((first->strAt(2) != "const" && second->strAt(2) == "const") ||
+                  (first->strAt(2) == "const" && second->strAt(2) != "const"))) {
+            if (first->strAt(2) != "const") {
+                first = first->next();
+                second = second->tokAt(2);
+            } else {
+                first = first->tokAt(2);
+                second = second->next();
+            }
         }
 
         // variable names are different
