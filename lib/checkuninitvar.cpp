@@ -266,14 +266,6 @@ static void conditionAlwaysTrueOrFalse(const Token *tok, const std::map<int, Var
     }
 
     else if (tok->isComparisonOp()) {
-        if (tok->hasKnownIntValue()) {
-            if (tok->values().front().intvalue)
-                *alwaysTrue = true;
-            else
-                *alwaysFalse = true;
-            return;
-        }
-
         if (variableValue.empty()) {
             return;
         }
@@ -1447,11 +1439,11 @@ bool CheckUninitVar::analyseWholeProgram(const CTU::FileInfo *ctu, const std::li
 
             const std::list<ErrorMessage::FileLocation> &locationList =
                 CTU::FileInfo::getErrorPath(CTU::FileInfo::InvalidValueType::uninit,
-                                  unsafeUsage,
-                                  callsMap,
-                                  "Using argument ARG",
-                                  &functionCall,
-                                  false);
+                                            unsafeUsage,
+                                            callsMap,
+                                            "Using argument ARG",
+                                            &functionCall,
+                                            false);
             if (locationList.empty())
                 continue;
 
