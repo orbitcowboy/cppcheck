@@ -137,7 +137,8 @@ void CheckClass::constructors()
         }
 
 
-        std::vector<Usage> usage(scope->varlist.size());
+        std::vector<Usage> usageList;
+        createUsageList(usageList, scope);
 
         for (const Function &func : scope->functionList) {
             if (!func.hasBody() || !(func.isConstructor() || func.type == Function::eOperatorEqual))
@@ -151,23 +152,22 @@ void CheckClass::constructors()
             }
 
             // Mark all variables not used
-            clearAllVar(usage);
+            clearAllVar(usageList);
 
             std::list<const Function *> callstack;
-            initializeVarList(func, callstack, scope, usage);
+            initializeVarList(func, callstack, scope, usageList);
 
             // Check if any variables are uninitialized
-            int count = -1;
-            for (const Variable &var : scope->varlist) {
-                ++count;
+            for (Usage &usage : usageList) {
+                const Variable& var = *usage.var;
 
                 // check for C++11 initializer
                 if (var.hasDefault()) {
-                    usage[count].init = true;
+                    usage.init = true;
                     continue;
                 }
 
-                if (usage[count].assign || usage[count].init || var.isStatic())
+                if (usage.assign || usage.init || var.isStatic())
                     continue;
 
                 if (var.valueType() && var.valueType()->pointer == 0 && var.type() && var.type()->needInitialization == Type::NeedInitialization::False && var.type()->derivedFrom.empty())
@@ -228,6 +228,7 @@ void CheckClass::constructors()
                         continue;
                     const Scope *varType = var.typeScope();
                     if (!varType || varType->type != Scope::eUnion) {
+                        const bool derived = scope != var.scope();
                         if (func.type == Function::eConstructor &&
                             func.nestedIn && (func.nestedIn->numConstructors - func.nestedIn->numCopyOrMoveConstructors) > 1 &&
                             func.argCount() == 0 && func.functionScope &&
@@ -235,9 +236,9 @@ void CheckClass::constructors()
                             func.functionScope->bodyStart->link() == func.functionScope->bodyStart->next()) {
                             // don't warn about user defined default constructor when there are other constructors
                             if (printInconclusive)
-                                uninitVarError(func.token, func.access == AccessControl::Private, func.type, scope->className, var.name(), true);
+                                uninitVarError(func.token, func.access == AccessControl::Private, func.type, var.scope()->className, var.name(), derived, true);
                         } else
-                            uninitVarError(func.token, func.access == AccessControl::Private, func.type, scope->className, var.name(), inconclusive);
+                            uninitVarError(func.token, func.access == AccessControl::Private, func.type, var.scope()->className, var.name(), derived, inconclusive);
                     }
                 }
             }
@@ -534,39 +535,48 @@ bool CheckClass::canNotMove(const Scope *scope)
     return constructor && !(publicAssign || publicCopy || publicMove);
 }
 
-void CheckClass::assignVar(nonneg int varid, const Scope *scope, std::vector<Usage> &usage)
+void CheckClass::createUsageList(std::vector<Usage>& usageList, const Scope *scope)
 {
-    int count = 0;
+    for (const Variable& var: scope->varlist)
+        usageList.push_back(Usage(&var));
+    if (scope->definedType) {
+        for (const Type::BaseInfo& baseInfo: scope->definedType->derivedFrom) {
+            const Scope *baseClass = baseInfo.type ? baseInfo.type->classScope : nullptr;
+            if (baseClass && baseClass->isClassOrStruct() && baseClass->numConstructors == 0)
+                createUsageList(usageList, baseClass);
+        }
+    }
+}
 
-    for (std::list<Variable>::const_iterator var = scope->varlist.begin(); var != scope->varlist.end(); ++var, ++count) {
-        if (var->declarationId() == varid) {
-            usage[count].assign = true;
+void CheckClass::assignVar(std::vector<Usage> &usageList, nonneg int varid)
+{
+    for (Usage& usage: usageList) {
+        if (usage.var->declarationId() == varid) {
+            usage.assign = true;
             return;
         }
     }
 }
 
-void CheckClass::initVar(nonneg int varid, const Scope *scope, std::vector<Usage> &usage)
+void CheckClass::initVar(std::vector<Usage> &usageList, nonneg int varid)
 {
-    int count = 0;
-
-    for (std::list<Variable>::const_iterator var = scope->varlist.begin(); var != scope->varlist.end(); ++var, ++count) {
-        if (var->declarationId() == varid) {
-            usage[count].init = true;
+    for (Usage& usage: usageList) {
+        if (usage.var->declarationId() == varid) {
+            usage.init = true;
             return;
         }
     }
 }
 
-void CheckClass::assignAllVar(std::vector<Usage> &usage)
+void CheckClass::assignAllVar(std::vector<Usage> &usageList)
 {
-    for (Usage & i : usage)
+    for (Usage & i : usageList)
         i.assign = true;
 }
 
-void CheckClass::clearAllVar(std::vector<Usage> &usage)
+void CheckClass::clearAllVar(std::vector<Usage> &usageList)
 {
-    for (Usage & i : usage) {
+    for (Usage & i : usageList) {
         i.assign = false;
         i.init = false;
     }
@@ -609,7 +619,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
         if (initList) {
             if (level == 0 && Token::Match(ftok, "%name% {|(") && Token::Match(ftok->linkAt(1), "}|) ,|{")) {
                 if (ftok->str() != func.name()) {
-                    initVar(ftok->varId(), scope, usage);
+                    initVar(usage, ftok->varId());
                 } else { // c++11 delegate constructor
                     const Function *member = ftok->function();
                     // member function not found => assume it initializes all members
@@ -640,7 +650,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
                     }
                 }
             } else if (level != 0 && Token::Match(ftok, "%name% =")) // assignment in the initializer: var(value = x)
-                assignVar(ftok->varId(), scope, usage);
+                assignVar(usage, ftok->varId());
 
             // Level handling
             if (ftok->link() && Token::Match(ftok, "(|<"))
@@ -660,7 +670,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
 
         // Variable getting value from stream?
         if (Token::Match(ftok, ">>|& %name%") && isLikelyStreamRead(true, ftok)) {
-            assignVar(ftok->next()->varId(), scope, usage);
+            assignVar(usage, ftok->next()->varId());
         }
 
         // If assignment comes after an && or || this is really inconclusive because of short circuiting
@@ -687,7 +697,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
             for (const Variable &var : scope->varlist) {
                 if (var.declarationId() == ftok->next()->varId()) {
                     /** @todo false negative: we assume function changes variable state */
-                    assignVar(ftok->next()->varId(), scope, usage);
+                    assignVar(usage, ftok->next()->varId());
                     break;
                 }
             }
@@ -736,7 +746,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
             int offsetToMember = 4;
             if (ftok->strAt(2) == "&")
                 ++offsetToMember;
-            assignVar(ftok->tokAt(offsetToMember)->varId(), scope, usage);
+            assignVar(usage, ftok->tokAt(offsetToMember)->varId());
             ftok = ftok->linkAt(1);
             continue;
         }
@@ -745,7 +755,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
         else if (Token::Match(ftok, "::| memset ( %name% ,")) {
             if (ftok->str() == "::")
                 ftok = ftok->next();
-            assignVar(ftok->tokAt(2)->varId(), scope, usage);
+            assignVar(usage, ftok->tokAt(2)->varId());
             ftok = ftok->linkAt(1);
             continue;
         }
@@ -820,7 +830,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
                             tok2 = tok2->next();
                             if (tok2->str() == "&")
                                 tok2 = tok2->next();
-                            assignVar(tok2->varId(), scope, usage);
+                            assignVar(usage, tok2->varId());
                         }
                     }
                 }
@@ -850,7 +860,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
                 else {
                     for (const Token *tok = ftok->tokAt(2); tok && tok != ftok->next()->link(); tok = tok->next()) {
                         if (tok->isName()) {
-                            assignVar(tok->varId(), scope, usage);
+                            assignVar(usage, tok->varId());
                         }
                     }
                 }
@@ -859,7 +869,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
 
         // Assignment of member variable?
         else if (Token::Match(ftok, "%name% =")) {
-            assignVar(ftok->varId(), scope, usage);
+            assignVar(usage, ftok->varId());
             bool bailout = ftok->variable() && ftok->variable()->isReference();
             const Token* tok2 = ftok->tokAt(2);
             if (tok2->str() == "&") {
@@ -867,7 +877,7 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
                 bailout = true;
             }
             if (tok2->variable() && (bailout || tok2->variable()->isArray()) && tok2->strAt(1) != "[")
-                assignVar(tok2->varId(), scope, usage);
+                assignVar(usage, tok2->varId());
         }
 
         // Assignment of array item of member variable?
@@ -882,19 +892,19 @@ void CheckClass::initializeVarList(const Function &func, std::list<const Functio
                     break;
             }
             if (tok2 && tok2->strAt(1) == "=")
-                assignVar(ftok->varId(), scope, usage);
+                assignVar(usage, ftok->varId());
         }
 
         // Assignment of array item of member variable?
         else if (Token::Match(ftok, "* %name% =")) {
-            assignVar(ftok->next()->varId(), scope, usage);
+            assignVar(usage, ftok->next()->varId());
         } else if (Token::Match(ftok, "* this . %name% =")) {
-            assignVar(ftok->tokAt(3)->varId(), scope, usage);
+            assignVar(usage, ftok->tokAt(3)->varId());
         }
 
         // The functions 'clear' and 'Clear' are supposed to initialize variable.
         if (Token::Match(ftok, "%name% . clear|Clear (")) {
-            assignVar(ftok->varId(), scope, usage);
+            assignVar(usage, ftok->varId());
         }
     }
 }
@@ -917,14 +927,17 @@ void CheckClass::noExplicitConstructorError(const Token *tok, const std::string 
     reportError(tok, Severity::style, "noExplicitConstructor", "$symbol:" + classname + '\n' + message + '\n' + verbose, CWE398, false);
 }
 
-void CheckClass::uninitVarError(const Token *tok, bool isprivate, Function::Type functionType, const std::string &classname, const std::string &varname, bool inconclusive)
+void CheckClass::uninitVarError(const Token *tok, bool isprivate, Function::Type functionType, const std::string &classname, const std::string &varname, bool derived, bool inconclusive)
 {
     std::string message;
     if ((functionType == Function::eCopyConstructor || functionType == Function::eMoveConstructor) && inconclusive)
         message = "Member variable '$symbol' is not assigned in the copy constructor. Should it be copied?";
     else
         message = "Member variable '$symbol' is not initialized in the constructor.";
-    reportError(tok, Severity::warning, isprivate ? "uninitMemberVarPrivate" : "uninitMemberVar", "$symbol:" + classname + "::" + varname + "\n" + message, CWE398, inconclusive);
+    if (derived)
+        message += " Maybe it should be initialized directly in the class " + classname + "?";
+    std::string id = std::string("uninit") + (derived ? "Derived" : "") + "MemberVar" + (isprivate ? "Private" : "");
+    reportError(tok, Severity::warning, id, "$symbol:" + classname + "::" + varname + "\n" + message, CWE398, inconclusive);
 }
 
 void CheckClass::operatorEqVarError(const Token *tok, const std::string &classname, const std::string &varname, bool inconclusive)
