@@ -440,7 +440,11 @@ static void setTokenValue(Token* tok, const ValueFlow::Value &value, const Setti
         // .empty, .size, +"abc", +'a'
         if (Token::Match(parent, "+|==|!=") && parent->astOperand1() && parent->astOperand2()) {
             for (const ValueFlow::Value &value1 : parent->astOperand1()->values()) {
+                if (value1.isImpossible())
+                    continue;
                 for (const ValueFlow::Value &value2 : parent->astOperand2()->values()) {
+                    if (value2.isImpossible())
+                        continue;
                     if (value1.path != value2.path)
                         continue;
                     ValueFlow::Value result;
@@ -5736,8 +5740,11 @@ struct ContainerVariableAnalyzer : VariableAnalyzer {
             }
         } else if (Token::Match(tok, "%name% . %name% (")) {
             Library::Container::Action action = tok->valueType()->container->getAction(tok->strAt(2));
-            if (action == Library::Container::Action::PUSH || action == Library::Container::Action::POP)
-                return Action::Read | Action::Write | Action::Incremental;
+            if (action == Library::Container::Action::PUSH || action == Library::Container::Action::POP) {
+                std::vector<const Token*> args = getArguments(tok->tokAt(3));
+                if (args.size() < 2)
+                    return Action::Read | Action::Write | Action::Incremental;
+            }
         }
         return Action::None;
     }
