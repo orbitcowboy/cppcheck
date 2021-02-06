@@ -304,39 +304,50 @@ In Linux you can use for instance the `bear` (build ear) utility to generate a c
 
 # Preprocessor Settings
 
-If you use `--project` then Cppcheck will use the preprocessor settings from the imported project. Otherwise you'll probably want to configure the include paths, defines, etc.
+If you use `--project` then Cppcheck will automatically use the preprocessor settings in the imported project file and
+likely you don't have to configure anything extra.
 
-## Defined and not defined
+If you don't use `--project` then a bit of manual preprocessor configuration might be required. However Cppcheck has
+automatic configuration of defines.
 
-Here is a file that has 2 preprocessor configurations with A defined and without A defined:
+## Automatic configuration of preprocessor defines
+
+Here is a file that has 3 bugs (when x,y,z are assigned).
 
     #ifdef A
-        x = y;
+        x=100/0;
+        #ifdef B
+            y=100/0;
+        #endif
     #else
-        x = z;
+        z=100/0;
     #endif
 
-By default Cppcheck will check all preprocessor configurations, except those that have #error in them.
-So the above code will by default be analyzed both with `A` defined and without `A` defined.
+    #ifndef C
+    #error C must be defined
+    #endif
 
-You can use `-D` and/or `-U` to change this. When you use `-D`, Cppcheck will by default only check the given configuration and nothing else. 
-This is how compilers work. But you can use `--force` or `--max-configs` to override the number of configurations.
 
-Check all configurations:
+To find all bugs the code must be preprocessed both with "-DC" and with "-DA -DB -DC".
 
-    cppcheck file.c
+Cppcheck automatically determines what combinations of defines are necessary to analyze all the code. The example code
+above will by default automatically be preprocessed and analyzed multiple times.
 
-Only check the configuration A:
+You can manually configure what combinations are checked with `-D`, `-U`, `--max-configs` and `--force`.
 
-    cppcheck -DA file.c
+The flag `-D` tells Cppcheck that a name is defined.
+The flag `-U` will tell Cppcheck that a name is not defined. 
+The flag `--force` and `--max-configs` is used to control how many combinations are checked. When `-D` is used,
+Cppcheck will only check 1 configuration unless these are used.
 
-Check all configurations when macro A is defined:
+Example:
 
-    cppcheck -DA --force file.c
+    cppcheck test.c => all bugs are found
+    cppcheck -DA test.c => No bug is found (#error)
+    cppcheck -DA -DC test.c => The first bug is found
+    cppcheck -UA test.c => The last bug is found
+    cppcheck --force -DA test.c => The two first bugs are found
 
-Another useful flag might be `-U`. It tells Cppcheck that a macro is not defined. Example usage:
-
-    cppcheck -UX file.c
 
 ## Include paths
 
