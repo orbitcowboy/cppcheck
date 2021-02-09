@@ -1750,9 +1750,11 @@ namespace {
         ScopeInfo3() : parent(nullptr), type(Global), bodyStart(nullptr), bodyEnd(nullptr) {}
         ScopeInfo3(ScopeInfo3 *parent_, Type type_, const std::string &name_, const Token *bodyStart_, const Token *bodyEnd_)
             : parent(parent_), type(type_), name(name_), bodyStart(bodyStart_), bodyEnd(bodyEnd_) {
+            if (name.empty())
+                return;
             fullName = name;
             ScopeInfo3 *scope = parent;
-            while (!fullName.empty() && scope && scope->parent) {
+            while (scope && scope->parent) {
                 fullName = scope->name + " :: " + fullName;
                 scope = scope->parent;
             }
@@ -1806,9 +1808,31 @@ namespace {
             }
         }
 
+        const ScopeInfo3 * findScope(const std::string & scope) const {
+            const ScopeInfo3 * tempScope = this;
+            while (tempScope) {
+                for (const auto & child : tempScope->children) {
+                    if (child.type == Record && (child.name == scope || child.fullName == scope))
+                        return &child;
+                }
+
+                tempScope = tempScope->parent;
+            }
+            return nullptr;
+        }
+
         bool findTypeInBase(const std::string &scope) const {
+            // check in base types first
             if (baseTypes.find(scope) != baseTypes.end())
                 return true;
+            // check in base types base types
+            for (const std::string & base : baseTypes) {
+                const ScopeInfo3 * baseScope = findScope(base);
+                if (baseScope && baseScope->fullName == scope)
+                    return true;
+                if (baseScope && baseScope->findTypeInBase(scope))
+                    return true;
+            }
             return false;
         }
     };
@@ -1819,9 +1843,10 @@ namespace {
             return;
         if (tok->str() == "{" && (*scopeInfo)->parent && tok == (*scopeInfo)->bodyStart)
             return;
-
-        while (tok->str() == "}" && (*scopeInfo)->parent && tok == (*scopeInfo)->bodyEnd)
+        if (tok->str() == "}" && (*scopeInfo)->parent && tok == (*scopeInfo)->bodyEnd) {
             *scopeInfo = (*scopeInfo)->parent;
+            return;
+        }
         if (!Token::Match(tok, "namespace|class|struct|union %name% {|:|::|<")) {
             // check for using namespace
             if (Token::Match(tok, "using namespace %name% ;|::")) {
@@ -2230,12 +2255,20 @@ bool Tokenizer::simplifyUsing()
         // of the token stream because templates are instantiated at
         // the end of the token stream and it may be used before then.
         std::string scope1;
+        bool inMemberFunc = false;
+        const ScopeInfo3 * memberFuncScope = nullptr;
+        const Token * memberFuncEnd = nullptr;
         bool skip = false; // don't erase type aliases we can't parse
         for (Token* tok1 = list.front(); tok1; tok1 = tok1->next()) {
             if ((Token::Match(tok1, "{|}|namespace|class|struct|union") && tok1->strAt(-1) != "using") ||
                 Token::Match(tok1, "using namespace %name% ;|::")) {
                 setScopeInfo(tok1, &currentScope1, true);
                 scope1 = currentScope1->fullName;
+                if (inMemberFunc && memberFuncEnd && tok1 == memberFuncEnd) {
+                    inMemberFunc = false;
+                    memberFuncScope = nullptr;
+                    memberFuncEnd = nullptr;
+                }
                 continue;
             }
 
@@ -2256,9 +2289,18 @@ bool Tokenizer::simplifyUsing()
                 if (!scope1.empty())
                     scope1 += " :: ";
                 scope1 += memberFunctionScope(tok1);
-            }
+                memberFuncScope = currentScope1->findScope(scope1);
 
-            if (!usingMatch(nameToken, scope, &tok1, scope1, currentScope1))
+                if (!memberFuncScope)
+                    continue;
+
+                inMemberFunc = true;
+                memberFuncEnd = currentScope1->bodyEnd;
+                continue;
+            } else if (inMemberFunc && memberFuncScope) {
+                if (!usingMatch(nameToken, scope, &tok1, scope1, memberFuncScope))
+                    continue;
+            } else if (!usingMatch(nameToken, scope, &tok1, scope1, currentScope1))
                 continue;
 
             // remove the qualification

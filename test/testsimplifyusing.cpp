@@ -79,6 +79,7 @@ private:
         TEST_CASE(simplifyUsing10008);
         TEST_CASE(simplifyUsing10054);
         TEST_CASE(simplifyUsing10136);
+        TEST_CASE(simplifyUsing10171);
     }
 
     std::string tok(const char code[], bool simplify = true, Settings::PlatformType type = Settings::Native, bool debugwarnings = true) {
@@ -970,36 +971,67 @@ private:
                                 "a . f ( v ) ; "
                                 "c . f ( v ) ; "
                                 "}";
-            const char act[]  = "namespace NS1 { "
-                                "class B { "
-                                "public: "
-                                "virtual void f ( const std :: vector < char > & ) const = 0 ; "
-                                "} ; "
-                                "} "
-                                "namespace NS2 { "
-                                "class A : public NS1 :: B { "
-                                "public: "
-                                "void f ( const std :: vector < char > & ) const override ; "
-                                "} ; "
-                                "namespace NS3 { "
-                                "class C : public A { "
-                                "public: "
-                                "void f ( const V & ) const override ; "
-                                "} ; "
-                                "void C :: f ( const V & ) const { } "
-                                "} "
-                                "void A :: f ( const V & ) const { } "
-                                "} "
-                                "void foo ( ) { "
-                                "NS2 :: A a ; "
-                                "NS2 :: NS3 :: C c ; "
-                                "std :: vector < char > v ; "
-                                "a . f ( v ) ; "
-                                "c . f ( v ) ; "
-                                "}";
-            TODO_ASSERT_EQUALS(exp, act, tok(code, true));
-            TODO_ASSERT_EQUALS("", "[test.cpp:20]: (debug) Executable scope 'f' with unknown function.\n", errout.str());
+            ASSERT_EQUALS(exp, tok(code, true));
+            ASSERT_EQUALS("", errout.str());
         }
+        {
+            const char code[] = "foo::ResultCodes_e\n"
+                                "GemImpl::setR(const ::foo::s _ipSource)\n"
+                                "{\n"
+                                "   M3_LOG_EE_DEBUG();\n"
+                                "   using MLSource = foo::s::Literal;\n"
+                                "   auto ret = foo::ResultCodes_e::NO_ERROR;\n"
+                                "   M3_LOG_INFO(\"foo(\" << static_cast<int>(_ipSource) << \")\");\n"
+                                "   return ret;\n"
+                                "}\n"
+                                "foo::ResultCodes_e\n"
+                                "GemImpl::getF(::foo::s &_ipSource)\n"
+                                "{\n"
+                                "   M3_LOG_EE_DEBUG();\n"
+                                "   auto ret = foo::ResultCodes_e::NO_ERROR;\n"
+                                "   return ret;\n"
+                                "}\n"
+                                "foo::ResultCodes_e\n"
+                                "GemImpl::setF(const ::foo::s _ipSource)\n"
+                                "{\n"
+                                "   M3_LOG_EE_DEBUG();\n"
+                                "   using MLSource = foo::s::Literal;\n"
+                                "   auto ret = foo::ResultCodes_e::NO_ERROR;\n"
+                                "   return ret;\n"
+                                "}";
+            tok(code, true); // don't crash
+        }
+    }
+
+    void simplifyUsing10171() {
+        const char code[] = "namespace ns {\n"
+                            "    class A {\n"
+                            "    public:\n"
+                            "        using V = std::vector<unsigned char>;\n"
+                            "        virtual void f(const V&) const = 0;\n"
+                            "    };\n"
+                            "    class B : public A {\n"
+                            "    public:\n"
+                            "        void f(const V&) const override;\n"
+                            "    };\n"
+                            "}\n"
+                            "namespace ns {\n"
+                            "    void B::f(const std::vector<unsigned char>&) const { }\n"
+                            "}";
+        const char exp[] = "namespace ns { "
+                           "class A { "
+                           "public: "
+                           "virtual void f ( const std :: vector < unsigned char > & ) const = 0 ; "
+                           "} ; "
+                           "class B : public A { "
+                           "public: "
+                           "void f ( const std :: vector < unsigned char > & ) const override ; "
+                           "} ; "
+                           "} "
+                           "namespace ns { "
+                           "void B :: f ( const std :: vector < unsigned char > & ) const { } "
+                           "}";
+        ASSERT_EQUALS(exp, tok(code, false));
     }
 };
 
