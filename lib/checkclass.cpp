@@ -2845,7 +2845,9 @@ Check::FileInfo *CheckClass::getFileInfo(const Tokenizer *tokenizer, const Setti
         // the full definition must be compared
         bool fullDefinition = std::all_of(classScope->functionList.begin(),
                                           classScope->functionList.end(),
-                                          [](const Function& f) { return f.hasBody(); });
+        [](const Function& f) {
+            return f.hasBody();
+        });
         if (!fullDefinition)
             continue;
 
@@ -2949,6 +2951,9 @@ bool CheckClass::analyseWholeProgram(const CTU::FileInfo *ctu, const std::list<C
                 continue;
             }
             if (it->second.hash == nameLoc.hash)
+                continue;
+            // Same location, sometimes the hash is different wrongly (possibly because of different token simplifications).
+            if (it->second.isSameLocation(nameLoc))
                 continue;
 
             std::list<ErrorMessage::FileLocation> locationList;
