@@ -2293,7 +2293,8 @@ bool Tokenizer::simplifyUsing()
 
         // We can limit the search to the current function when the type alias
         // is defined in that function.
-        if (currentScope->type == ScopeInfo3::Other) {
+        if (currentScope->type == ScopeInfo3::Other ||
+            currentScope->type == ScopeInfo3::MemberFunction) {
             scopeInfo1 = scopeInfo;
             currentScope1 = scopeInfo.findScope(currentScope);
             if (!currentScope1)
@@ -2307,7 +2308,7 @@ bool Tokenizer::simplifyUsing()
         const ScopeInfo3 * memberFuncScope = nullptr;
         const Token * memberFuncEnd = nullptr;
         bool skip = false; // don't erase type aliases we can't parse
-        for (Token* tok1 = startToken; tok1 != endToken; tok1 = tok1->next()) {
+        for (Token* tok1 = startToken; tok1 && tok1 != endToken; tok1 = tok1->next()) {
             if ((Token::Match(tok1, "{|}|namespace|class|struct|union") && tok1->strAt(-1) != "using") ||
                 Token::Match(tok1, "using namespace %name% ;|::")) {
                 setScopeInfo(tok1, &currentScope1);
@@ -4700,6 +4701,9 @@ bool Tokenizer::simplifyTokenList1(const char FileName[])
 
     removePragma();
 
+    // Simplify the C alternative tokens (and, or, etc.)
+    simplifyCAlternativeTokens();
+
     reportUnknownMacros();
 
     simplifyHeadersAndUnusedTemplates();
@@ -4756,9 +4760,6 @@ bool Tokenizer::simplifyTokenList1(const char FileName[])
 
     // Combine tokens..
     combineOperators();
-
-    // Simplify the C alternative tokens (and, or, etc.)
-    simplifyCAlternativeTokens();
 
     // replace 'sin(0)' to '0' and other similar math expressions
     simplifyMathExpressions();
@@ -7626,6 +7627,11 @@ bool Tokenizer::simplifyCAlternativeTokens()
             replaceAll = true;
         } else if (Token::Match(tok, "not|compl")) {
             alt.push_back(tok);
+
+            if (Token::Match(tok->previous(), "%assign%") || Token::Match(tok->next(), "%num%")) {
+                replaceAll = true;
+                continue;
+            }
 
             // Don't simplify 'not p;' (in case 'not' is a type)
             if (!Token::Match(tok->next(), "%name%|(") ||
