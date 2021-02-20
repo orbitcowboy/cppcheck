@@ -565,7 +565,7 @@ private:
         // #8141
         check("intmax_t f() {\n"
               "  return 1 / imaxabs(0);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2]: (error) Division by zero.\n", errout.str());
     }
     void zeroDiv13() {
@@ -701,7 +701,7 @@ private:
               "  else if (x > 0) {}\n"
               "  else\n"
               "    a = b / -x;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A {\n"
@@ -1273,7 +1273,7 @@ private:
               "       if (cond2) { dostuff(key); }\n"
               "     }\n"
               "  }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -1622,7 +1622,7 @@ private:
               "class Plane {\n"
               "    vec Refract(vec &vec) const;\n"
               "    bool IntersectLinePlane(const vec &planeNormal);\n"
-              "}; ");
+              "};");
         ASSERT_EQUALS("", errout.str());
 
         check("class X {\n"
@@ -1844,134 +1844,134 @@ private:
         check("int f(std::vector<int> x) {\n"
               "    int& i = x[0];\n"
               "    return i;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2]: (style) Variable 'i' can be declared with const\n", errout.str());
 
         check("int f(std::vector<int>& x) {\n"
               "    return x[0];\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:1]: (style) Parameter 'x' can be declared with const\n", errout.str());
 
         check("int f(std::vector<int> x) {\n"
               "    const int& i = x[0];\n"
               "    return i;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int f(std::vector<int> x) {\n"
               "    static int& i = x[0];\n"
               "    return i;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int f(std::vector<int> x) {\n"
               "    int& i = x[0];\n"
               "    i++;\n"
               "    return i;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int& f(std::vector<int>& x) {\n"
               "    x.push_back(1);\n"
               "    int& i = x[0];\n"
               "    return i;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int f(const std::vector<int>& x) {\n"
               "    return x[0];\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int& f(std::vector<int>& x) {\n"
               "    return x[0];\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int f(std::vector<int>& x) {\n"
               "    x[0]++;\n"
               "    return x[0];\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A { int a; };\n"
               "A f(std::vector<A>& x) {\n"
               "    x[0].a = 1;\n"
               "    return x[0];\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A { int a(); };\n"
               "A f(std::vector<A>& x) {\n"
               "    x[0].a();\n"
               "    return x[0];\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int g(int& x);\n"
               "int f(std::vector<int>& x) {\n"
               "    g(x[0]);\n"
               "    return x[0];\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("template<class T>\n"
               "T f(T& x) {\n"
               "    return x[0];\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("template<class T>\n"
               "T f(T&& x) {\n"
               "    return x[0];\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("template<class T>\n"
               "T f(T& x) {\n"
               "    return x[0];\n"
               "}\n"
-              "void h() { std::vector<int> v; h(v); }\n");
+              "void h() { std::vector<int> v; h(v); }");
         ASSERT_EQUALS("", errout.str());
 
         check("int f(int& x) {\n"
               "    return std::move(x);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(std::ostream& os) {\n"
               "    os << \"Hello\";\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void g(int*);\n"
               "void f(int& x) {\n"
               "    g(&x);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A { A(int*); };\n"
               "A f(int& x) {\n"
               "    return A(&x);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A { A(int*); };\n"
               "A f(int& x) {\n"
               "    return A{&x};\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         // Perhaps unused variable should be checked as well.
         check("void f(int& x, int& y) {\n"
               "    y++;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A {\n"
               "    explicit A(int& y) : x(&y) {}\n"
               "    int * x = nullptr;\n"
-              "};\n");
+              "};");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A {\n"
@@ -1979,7 +1979,7 @@ private:
               "    void swap(A& a) {\n"
               "        v.swap(a.v);\n"
               "    }\n"
-              "};\n");
+              "};");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A {\n"
@@ -1990,54 +1990,54 @@ private:
               "};\n"
               "void g(A& a) {\n"
               "    a.f<int>();\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(std::vector<int>& v) {\n"
               "    for(auto&& x:v)\n"
               "        x = 1;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(std::vector<int>& v) {\n"
               "    for(auto x:v)\n"
               "        x = 1;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:1]: (style) Parameter 'v' can be declared with const\n", errout.str());
 
         check("void f(std::vector<int>& v) {\n"
               "    for(auto& x:v) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:1]: (style) Parameter 'v' can be declared with const\n", errout.str());
 
         check("void f(std::vector<int>& v) {\n"
               "    for(const auto& x:v) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:1]: (style) Parameter 'v' can be declared with const\n", errout.str());
 
         check("void f(int& i) {\n"
               "    int& j = i;\n"
               "    j++;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(std::vector<int>& v) {\n"
               "    int& i = v[0];\n"
               "    i++;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(std::map<unsigned int, std::map<std::string, unsigned int> >& m, unsigned int i) {\n"
               "    std::map<std::string, unsigned int>& members = m[i];\n"
               "    members.clear();\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A {\n"
               "    int& x;\n"
               "    A(int& y) : x(y)\n"
               "    {}\n"
-              "};\n");
+              "};");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A {\n"
@@ -2046,14 +2046,14 @@ private:
               "struct B : A {\n"
               "    B(int& x) : A(x)\n"
               "    {}\n"
-              "};\n");
+              "};");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(bool b, int& x, int& y) {\n"
               "  auto& z = x;\n"
               "  auto& w = b ? y : z;\n"
               "  w = 1;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct S {\n"
@@ -2061,7 +2061,7 @@ private:
               "};\n"
               "int& f(S& s) {\n"
               "  return s.i;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int* f(std::list<int>& x, unsigned int y) {\n"
@@ -2070,7 +2070,7 @@ private:
               "            return &m;\n"
               "    }\n"
               "    return nullptr;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int& f(std::list<int>& x, int& y) {\n"
@@ -2079,7 +2079,7 @@ private:
               "            return m;\n"
               "    }\n"
               "    return y;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("bool from_string(int& t, const std::string& s) {\n"
@@ -2484,7 +2484,7 @@ private:
               "}\n"
               "void bc(size_t ae) {\n"
               "wchar_t *ad = 0, *af = 0;\n"
-              "struct tm *ag = 0;                  \n"
+              "struct tm *ag = 0;\n"
               "(void)std::wcsftime(ad, ae, af, ag);\n"
               "(void)std::wcsftime(0, ae, 0, 0);\n"
               "}\n"
@@ -2498,7 +2498,7 @@ private:
               "void bh(const std::list<int> &ak, const std::list<int> &al);\n"
               "void ah();\n"
               "void an();\n"
-              "void h();\n");
+              "void h();");
         ASSERT_EQUALS("", errout.str());
 
         check("class C\n"
@@ -2519,7 +2519,7 @@ private:
               "D::D(int& i)\n"
               "  : c(i)\n"
               "{\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("class C\n"
@@ -2560,7 +2560,7 @@ private:
               "D::D(int& i)\n"
               "  : c(i)\n"
               "{\n"
-              "}\n");
+              "}");
         TODO_ASSERT_EQUALS("[test.cpp:16]: (style) Parameter 'i' can be declared with const\n", "", errout.str());
 
         check("class C\n"
@@ -2581,7 +2581,7 @@ private:
               "D::D(int& i)\n"
               "  : c(i)\n"
               "{\n"
-              "}\n");
+              "}");
         TODO_ASSERT_EQUALS("[test.cpp:16]: (style) Parameter 'i' can be declared with const\n", "", errout.str());
 
         check("class C\n"
@@ -2602,7 +2602,7 @@ private:
               "D::D(int& i)\n"
               "  : c(0, i)\n"
               "{\n"
-              "}\n");
+              "}");
         TODO_ASSERT_EQUALS("[test.cpp:16]: (style) Parameter 'i' can be declared with const\n", "", errout.str());
     }
 
@@ -4020,7 +4020,7 @@ private:
               "void something(void) {}\n"
               "void f() {\n"
               "    struct callbacks ops = { .s = ops.s };\n"
-              "}\n");
+              "}");
         TODO_ASSERT_EQUALS("[test.cpp:6]: (warning) Redundant assignment of 'something' to itself.\n", "", errout.str());
 
         check("class V\n"
@@ -4069,8 +4069,7 @@ private:
               "    Lock(123);\n"
               "    std::cout << \"hello\" << std::endl;\n"
               "    return 0;\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("[test.cpp:15]: (style) Instance of 'Lock' object is destroyed immediately.\n", errout.str());
     }
 
@@ -4089,8 +4088,7 @@ private:
               "{\n"
               "    CouldBeFunction ( 123 ) ;\n"
               "    return 0 ;\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4107,8 +4105,7 @@ private:
               "        error();\n"
               "        do_something();\n"
               "    }\n"
-              "};\n"
-             );
+              "};");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4118,8 +4115,7 @@ private:
               "{\n"
               "    NotAFunction ( 123 );\n"
               "    return 0 ;\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("[test.cpp:4]: (style) Instance of 'NotAFunction' object is destroyed immediately.\n", errout.str());
     }
 
@@ -4129,8 +4125,7 @@ private:
               "{\n"
               "    NotAClass ( 123 ) ;\n"
               "    return true ;\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("[test.cpp:4]: (style) Instance of 'NotAClass' object is destroyed immediately.\n", errout.str());
     }
 
@@ -4139,8 +4134,7 @@ private:
               "{\n"
               "    if ( a > b ) return c == a ;\n"
               "    return b == a ;\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4150,8 +4144,7 @@ private:
               "public:\n"
               "~Something ( ) ;\n"
               "Something ( ) ;\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4170,8 +4163,7 @@ private:
               "    int a = 1;\n"
               "    IncrementFunctor()(a);\n"
               "    return a;\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4184,8 +4176,7 @@ private:
               "    };\n"
               "    Foo();\n"
               "    do_something();\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("[test.cpp:7]: (style) Instance of 'Foo' object is destroyed immediately.\n", errout.str());
     }
 
@@ -4197,8 +4188,7 @@ private:
               "\n"
               "void fn() {\n"
               "    Foo().bar();\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4280,8 +4270,7 @@ private:
               "\n"
               "    { sigaction(SIGHUP, &sa, 0); };\n"
               "    { sigaction(SIGINT, &sa, 0); };\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4292,8 +4281,7 @@ private:
               "    };\n"
               "\n"
               "    const AB ab[3] = { AB(0), AB(1), AB(2) };\n"
-              "}\n"
-             );
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4546,7 +4534,7 @@ private:
               "    } else {\n"
               "        x = j;\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:5] -> [test.cpp:3]: (style, inconclusive) Found duplicate branches for 'if' and 'else'.\n", errout.str());
 
         check("void f(bool b, int i) {\n"
@@ -4557,7 +4545,7 @@ private:
               "    } else {\n"
               "        x = j;\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4568,7 +4556,7 @@ private:
               "    } else {\n"
               "        return new A::Z(true);\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -4944,7 +4932,7 @@ private:
         check("void f(C *src) {\n"
               "    if (x<A*>(src) || x<B*>(src))\n"
               "        a++;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(A *src) {\n"
@@ -5001,36 +4989,36 @@ private:
         check("void f() {\n"
               "    const int i = sizeof(int);\n"
               "    if ( i != sizeof (int)){}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'i != sizeof(int)' is always false because 'i' and 'sizeof(int)' represent the same value.\n", errout.str());
 
         check("void f() {\n"
               "    const int i = sizeof(int);\n"
               "    if ( sizeof (int) != i){}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'sizeof(int) != i' is always false because 'sizeof(int)' and 'i' represent the same value.\n", errout.str());
 
-        check("void f(int a = 1) { if ( a != 1){}}\n");
+        check("void f(int a = 1) { if ( a != 1){}}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
               "    int a = 1;\n"
-              "    if ( a != 1){} \n"
-              "}\n");
+              "    if ( a != 1){}\n"
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'a != 1' is always false.\n", errout.str());
 
         check("void f() {\n"
               "    int a = 1;\n"
               "    int b = 1;\n"
-              "    if ( a != b){} \n"
-              "}\n");
+              "    if ( a != b){}\n"
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3] -> [test.cpp:4]: (style) The comparison 'a != b' is always false because 'a' and 'b' represent the same value.\n", errout.str());
 
         check("void f() {\n"
               "    int a = 1;\n"
               "    int b = a;\n"
-              "    if ( a != b){} \n"
-              "}\n");
+              "    if ( a != b){}\n"
+              "}");
         ASSERT_EQUALS("[test.cpp:3] -> [test.cpp:4]: (style) The comparison 'a != b' is always false because 'a' and 'b' represent the same value.\n", errout.str());
 
         check("void use(int);\n"
@@ -5038,8 +5026,8 @@ private:
               "    int a = 1;\n"
               "    int b = 1;\n"
               "    use(b);\n"
-              "    if ( a != 1){} \n"
-              "}\n");
+              "    if ( a != 1){}\n"
+              "}");
         ASSERT_EQUALS("[test.cpp:3] -> [test.cpp:6]: (style) The comparison 'a != 1' is always false.\n", errout.str());
 
         check("void use(int);\n"
@@ -5047,8 +5035,8 @@ private:
               "    int a = 1;\n"
               "    use(a);\n"
               "    a = 2;\n"
-              "    if ( a != 1){} \n"
-              "}\n");
+              "    if ( a != 1){}\n"
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void use(int);\n"
@@ -5056,39 +5044,39 @@ private:
               "    int a = 2;\n"
               "    use(a);\n"
               "    a = 1;\n"
-              "    if ( a != 1){} \n"
-              "}\n");
+              "    if ( a != 1){}\n"
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("const int a = 1;\n"
               "void f() {\n"
-              "    if ( a != 1){} \n"
-              "}\n");
+              "    if ( a != 1){}\n"
+              "}");
         ASSERT_EQUALS("[test.cpp:1] -> [test.cpp:3]: (style) The comparison 'a != 1' is always false.\n", errout.str());
 
         check("int a = 1;\n"
               "    void f() {\n"
-              "    if ( a != 1){} \n"
-              "}\n");
+              "    if ( a != 1){}\n"
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
               "    static const int a = 1;\n"
-              "    if ( a != 1){} \n"
-              "}\n");
+              "    if ( a != 1){}\n"
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'a != 1' is always false.\n", errout.str());
 
         check("void f() {\n"
               "    static int a = 1;\n"
-              "    if ( a != 1){} \n"
-              "}\n");
+              "    if ( a != 1){}\n"
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
               "    int a = 1;\n"
               "    if ( a != 1){\n"
               "        a++;\n"
-              "    }}\n");
+              "    }}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'a != 1' is always false.\n", errout.str());
 
         check("void f(int b) {\n"
@@ -5097,26 +5085,26 @@ private:
               "        if ( a != 1){}\n"
               "        a++;\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("bool f(bool a, bool b) {\n"
               "    const bool c = a;\n"
               "    return a && b && c;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) Same expression on both sides of '&&' because 'a' and 'c' represent the same value.\n", errout.str());
 
         // 6906
         check("void f(const bool b) {\n"
               "   const bool b1 = !b;\n"
               "   if(!b && b1){}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) Same expression on both sides of '&&' because '!b' and 'b1' represent the same value.\n", errout.str());
 
         // 7284
         check("void f(void) {\n"
               "   if (a || !!a) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2]: (style) Same expression on both sides of '||' because 'a' and '!!a' represent the same value.\n", errout.str());
 
         // 8205
@@ -5127,7 +5115,7 @@ private:
               "       if (Diag==0) {}\n"
               "       break;\n"
               "   }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:5]: (style) The comparison 'Diag == 0' is always true.\n", errout.str());
     }
 
@@ -5137,13 +5125,13 @@ private:
               "    int b = a;\n"
               "    a = 2;\n"
               "    if ( b != a){}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
-        check("void f(int * a, int i) { int b = a[i]; a[i] = 2; if ( b != a[i]){}}\n");
+        check("void f(int * a, int i) { int b = a[i]; a[i] = 2; if ( b != a[i]){}}");
         ASSERT_EQUALS("", errout.str());
 
-        check("void f(int * a, int i) { int b = *a; *a = 2; if ( b != *a){}}\n");
+        check("void f(int * a, int i) { int b = *a; *a = 2; if ( b != *a){}}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A { int f() const; };\n"
@@ -5154,7 +5142,7 @@ private:
               "        x = g();\n"
               "        if (x.f() == a) break;\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int f(int i);\n"
@@ -5167,33 +5155,33 @@ private:
               "    const bool x = a.f(A::B);\n"
               "    const bool y = a.f(A::C);\n"
               "    if(!x && !y) return;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
-        check("void foo() { \n"
+        check("void foo() {\n"
               "    const bool x = a.f(A::B);\n"
               "    const bool y = a.f(A::C);\n"
               "    if (!x && !y) return;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(bool * const b);\n"
-              "void foo() { \n"
+              "void foo() {\n"
               "    bool x = true;\n"
               "    bool y = true;\n"
               "    f(&x);\n"
               "    if (!x && !y) return;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
               "    const int a = {};\n"
               "    if(a == 1) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("volatile const int var = 42;\n"
-              "void f() { if(var == 42) {} }\n");
+              "void f() { if(var == 42) {} }");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
@@ -5202,7 +5190,7 @@ private:
               "    c.a = &a;\n"
               "    g(&c);\n"
               "    if (a == 0) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -5212,7 +5200,7 @@ private:
               "  uint16_t x = 1000;\n"
               "  uint8_t y = x;\n"
               "  if (x != y) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -5223,7 +5211,7 @@ private:
               "   const int b = a-1;\n"
               "   const int c = a+1;\n"
               "   return c;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -5252,23 +5240,23 @@ private:
         check("void f() {\n"
               "    int a = 1;\n"
               "    while ( a != 1){}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'a != 1' is always false.\n", errout.str());
 
-        check("void f() { int a = 1; while ( a != 1){ a++; }}\n");
+        check("void f() { int a = 1; while ( a != 1){ a++; }}");
         ASSERT_EQUALS("", errout.str());
 
-        check("void f() { int a = 1; for ( int i=0; i < 3 && a != 1; i++){ a++; }}\n");
+        check("void f() { int a = 1; for ( int i=0; i < 3 && a != 1; i++){ a++; }}");
         ASSERT_EQUALS("", errout.str());
 
-        check("void f(int b) { int a = 1; while (b) { if ( a != 1){} b++; } a++; } \n");
+        check("void f(int b) { int a = 1; while (b) { if ( a != 1){} b++; } a++; }");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
               "    for(int i = 0; i < 10;) {\n"
               "        if( i != 0 ) {}\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'i != 0' is always false.\n", errout.str());
 
         check("void f() {\n"
@@ -5276,7 +5264,7 @@ private:
               "        if( i != 0 ) {}\n"
               "        i++;\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
@@ -5284,14 +5272,14 @@ private:
               "        if( i != 0 ) { i++; }\n"
               "        i++;\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
               "    for(int i = 0; i < 10;) {\n"
               "        if( i != 0 ) { i++; }\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
@@ -5300,7 +5288,7 @@ private:
               "        if( i != 0 ) {}\n"
               "        i++;\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(int b) {\n"
@@ -5309,7 +5297,7 @@ private:
               "        if ( a != 1){}\n"
               "        b++;\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:3] -> [test.cpp:4]: (style) The comparison 'a != 1' is always false.\n", errout.str());
     }
 
@@ -5322,7 +5310,7 @@ private:
         check("int f(bool b, int a) {\n"
               "    const int c = a;\n"
               "    return b ? a : c;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) Same expression in both branches of ternary operator.\n", errout.str());
 
         check("void f() {\n"
@@ -5498,7 +5486,7 @@ private:
               "    const bool b = a;\n"
               "    if( a == !(b) ) {}\n"
               "    if( b == !(a) ) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) Opposite expression on both sides of '=='.\n"
                       "[test.cpp:2] -> [test.cpp:4]: (style) Opposite expression on both sides of '=='.\n", errout.str());
 
@@ -5506,7 +5494,7 @@ private:
               "    const bool b = *a;\n"
               "    if( *a == !(b) ) {}\n"
               "    if( b == !(*a) ) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) Opposite expression on both sides of '=='.\n"
                       "[test.cpp:2] -> [test.cpp:4]: (style) Opposite expression on both sides of '=='.\n", errout.str());
 
@@ -5531,29 +5519,29 @@ private:
         check("void A::f(bool a, bool c)\n"
               "{\n"
               "    const bool b = a;\n"
-              "    if(c) { a = false; } \n"
+              "    if(c) { a = false; }\n"
               "    if(b && !a) { }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(bool c) {\n"
               "    const bool b = a;\n"
-              "    if(c) { a = false; } \n"
+              "    if(c) { a = false; }\n"
               "    if(b && !a) { }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
               "    bool x = a;\n"
               "    dostuff();\n"
               "    if (x && a) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n"
               "  const bool b = g();\n"
               "  if (!b && g()) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(bool *a) {\n"
@@ -5891,7 +5879,7 @@ private:
               "        }\n"
               "        previous = current;\n"
               "    }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:16] -> [test.cpp:15]: (style, inconclusive) Same expression used in consecutive assignments of 'current' and 'previous'.\n", errout.str());
     }
 
@@ -5907,21 +5895,21 @@ private:
               "        int b = x.f();\n"
               "        (void)a;\n"
               "        (void)b;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:8] -> [test.cpp:7]: (style, inconclusive) Same expression used in consecutive assignments of 'a' and 'b'.\n", errout.str());
 
         // Issue #8712
         check("void f() {\n"
               "  unsigned char d;\n"
               "  d = d % 5;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("template <typename T>\n"
               "T f() {\n"
               "  T x = T();\n"
               "}\n"
-              "int &a = f<int&>();\n");
+              "int &a = f<int&>();");
         ASSERT_EQUALS("", errout.str());
 
         // Issue #8713
@@ -5933,7 +5921,7 @@ private:
               "  uint32_t a = 42;\n"
               "  uint32_t b = uint32_t(A ::B / 1024);\n"
               "  int32_t c = int32_t(a / b);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         // Issue #8709
@@ -5942,7 +5930,7 @@ private:
               "  switch (d) { case b:; }\n"
               "  double e(b);\n"
               "  if(e <= 0) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
     }
@@ -5952,7 +5940,7 @@ private:
               "  int val = 0;\n"
               "  if (val < 0) continue;\n"
               "  if ((val > 0)) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'val < 0' is always false.\n"
                       "[test.cpp:2] -> [test.cpp:4]: (style) The comparison 'val > 0' is always false.\n", errout.str());
 
@@ -5979,7 +5967,7 @@ private:
               "  if (val < 0) {\n"
               "    if ((val > 0)) {}\n"
               "  }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'val < 0' is always false.\n"
                       "[test.cpp:2] -> [test.cpp:4]: (style) The comparison 'val > 0' is always false.\n", errout.str());
 
@@ -5988,7 +5976,7 @@ private:
               "  if (val < 0) {\n"
               "    if ((val < 0)) {}\n"
               "  }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) The comparison 'val < 0' is always false.\n"
                       "[test.cpp:2] -> [test.cpp:4]: (style) The comparison 'val < 0' is always false.\n", errout.str());
 
@@ -5997,7 +5985,7 @@ private:
               "  int foo = 0;\n"
               "  if (activate) {}\n"
               "  else if (foo) {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -6209,7 +6197,7 @@ private:
             keepTemplates.checkUnusedTemplates = true;
             check("template<int n> void foo(unsigned int x) {\n"
                   "if (x <= 0);\n"
-                  "}\n", &keepTemplates);
+                  "}", &keepTemplates);
             ASSERT_EQUALS("[test.cpp:2]: (style) Checking if unsigned expression 'x' is less than zero.\n", errout.str());
         }
 
@@ -6220,7 +6208,7 @@ private:
               "  {\n"
               "    value = 0u;\n"
               "  }\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:3]: (style) Checking if unsigned expression 'value' is less than zero.\n", errout.str());
 
         // #9040
@@ -6306,7 +6294,7 @@ private:
               "  int* ptr;\n"
               "};\n"
               "void foo(S* first) {\n"
-              "  if (first.ptr >= 0) {} \n"
+              "  if (first.ptr >= 0) {}\n"
               "}");
         ASSERT_EQUALS("[test.cpp:5]: (style) A pointer can not be negative so it is either pointless or an error to check if it is not.\n", errout.str());
 
@@ -6314,7 +6302,7 @@ private:
               "  int* ptr;\n"
               "};\n"
               "void foo(S* first, S* second) {\n"
-              "  if((first.ptr - second.ptr) >= 0) {} \n"
+              "  if((first.ptr - second.ptr) >= 0) {}\n"
               "}");
         ASSERT_EQUALS("", errout.str());
 
@@ -6322,7 +6310,7 @@ private:
               "  int* ptr;\n"
               "};\n"
               "void foo(S* first) {\n"
-              "  if((first.ptr) >= 0) {} \n"
+              "  if((first.ptr) >= 0) {}\n"
               "}");
         ASSERT_EQUALS("[test.cpp:5]: (style) A pointer can not be negative so it is either pointless or an error to check if it is not.\n", errout.str());
 
@@ -6330,7 +6318,7 @@ private:
               "  int* ptr;\n"
               "};\n"
               "void foo(S* first, S* second) {\n"
-              "  if(0 <= first.ptr - second.ptr) {} \n"
+              "  if(0 <= first.ptr - second.ptr) {}\n"
               "}");
         ASSERT_EQUALS("", errout.str());
 
@@ -6338,7 +6326,7 @@ private:
               "  int* ptr;\n"
               "};\n"
               "void foo(S* first, S* second) {\n"
-              "  if(0 <= (first.ptr - second.ptr)) {} \n"
+              "  if(0 <= (first.ptr - second.ptr)) {}\n"
               "}");
         ASSERT_EQUALS("", errout.str());
 
@@ -6346,7 +6334,7 @@ private:
               "  int* ptr;\n"
               "};\n"
               "void foo(S* first, S* second) {\n"
-              "  if(first.ptr - second.ptr < 0) {} \n"
+              "  if(first.ptr - second.ptr < 0) {}\n"
               "}");
         ASSERT_EQUALS("", errout.str());
 
@@ -6354,7 +6342,7 @@ private:
               "  int* ptr;\n"
               "};\n"
               "void foo(S* first, S* second) {\n"
-              "  if((first.ptr - second.ptr) < 0) {} \n"
+              "  if((first.ptr - second.ptr) < 0) {}\n"
               "}");
         ASSERT_EQUALS("", errout.str());
 
@@ -6362,7 +6350,7 @@ private:
               "  int* ptr;\n"
               "};\n"
               "void foo(S* first, S* second) {\n"
-              "  if(0 > first.ptr - second.ptr) {} \n"
+              "  if(0 > first.ptr - second.ptr) {}\n"
               "}");
         ASSERT_EQUALS("", errout.str());
 
@@ -6370,7 +6358,7 @@ private:
               "  int* ptr;\n"
               "};\n"
               "void foo(S* first, S* second) {\n"
-              "  if(0 > (first.ptr - second.ptr)) {} \n"
+              "  if(0 > (first.ptr - second.ptr)) {}\n"
               "}");
         ASSERT_EQUALS("", errout.str());
 
@@ -6748,7 +6736,7 @@ private:
               "}");
         ASSERT_EQUALS("[test.cpp:2]: (portability) Shifting a negative value is technically undefined behaviour\n", errout.str());
 
-        check("x = y ? z << $-1 : 0;\n");
+        check("x = y ? z << $-1 : 0;");
         ASSERT_EQUALS("", errout.str());
 
         // Negative LHS
@@ -6763,7 +6751,7 @@ private:
         check("int shift1() { return 1 >> -1 ;}\n"
               "int shift2() { return 1 << -1 ;}\n"
               "int shift3() { return -1 >> 1 ;}\n"
-              "int shift4() { return -1 << 1 ;}\n");
+              "int shift4() { return -1 << 1 ;}");
         ASSERT_EQUALS("[test.cpp:1]: (error) Shifting by a negative value is undefined behaviour\n"
                       "[test.cpp:2]: (error) Shifting by a negative value is undefined behaviour\n"
                       "[test.cpp:3]: (portability) Shifting a negative value is technically undefined behaviour\n"
@@ -7768,7 +7756,7 @@ private:
               "{\n"
               "  if (pipe (arrayPtr) < 0)\n"
               "  {}\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         // avoid crash with pointer variable - for local variable on stack as well - see #4801
@@ -8134,7 +8122,7 @@ private:
         // no signed integer overflow should happen
         check("void f(unsigned long long ull) {\n"
               "    if (ull == 0x89504e470d0a1a0a || ull == 0x8a4d4e470d0a1a0a) ;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -8207,7 +8195,7 @@ private:
                                   "    int counter = 0;\n"
                                   "    InterlockedDecrement(&counter);\n"
                                   "    whatever();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8216,7 +8204,7 @@ private:
                                   "    if (counter)\n"
                                   "        return;\n"
                                   "    destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8224,7 +8212,7 @@ private:
                                   "    InterlockedDecrement(&counter);\n"
                                   "    if (!counter)\n"
                                   "        destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8233,7 +8221,7 @@ private:
                                   "    if (counter > 0)\n"
                                   "        return;\n"
                                   "    destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8242,7 +8230,7 @@ private:
                                   "    if (0 < counter)\n"
                                   "        return;\n"
                                   "    destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8250,7 +8238,7 @@ private:
                                   "    InterlockedDecrement(&counter);\n"
                                   "    if (counter == 0)\n"
                                   "        destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8258,7 +8246,7 @@ private:
                                   "    InterlockedDecrement(&counter);\n"
                                   "    if (0 == counter)\n"
                                   "        destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8267,7 +8255,7 @@ private:
                                   "    if (0 != counter)\n"
                                   "        return;\n"
                                   "    destroy()\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8276,7 +8264,7 @@ private:
                                   "    if (counter != 0)\n"
                                   "        return;\n"
                                   "    destroy()\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8284,7 +8272,7 @@ private:
                                   "    InterlockedDecrement(&counter);\n"
                                   "    if (counter <= 0)\n"
                                   "        destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8292,7 +8280,7 @@ private:
                                   "    InterlockedDecrement(&counter);\n"
                                   "    if (0 >= counter)\n"
                                   "        destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8301,7 +8289,7 @@ private:
                                   "    if (newCount)\n"
                                   "        return;\n"
                                   "    destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8309,7 +8297,7 @@ private:
                                   "    int newCount = InterlockedDecrement(&counter);\n"
                                   "    if (!newCount)\n"
                                   "        destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8318,7 +8306,7 @@ private:
                                   "    if (newCount > 0)\n"
                                   "        return;\n"
                                   "    destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8327,7 +8315,7 @@ private:
                                   "    if (0 < newCount)\n"
                                   "        return;\n"
                                   "    destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8335,7 +8323,7 @@ private:
                                   "    int newCount = InterlockedDecrement(&counter);\n"
                                   "    if (newCount == 0)\n"
                                   "        destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8343,7 +8331,7 @@ private:
                                   "    int newCount = InterlockedDecrement(&counter);\n"
                                   "    if (0 == newCount)\n"
                                   "        destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8352,7 +8340,7 @@ private:
                                   "    if (0 != newCount)\n"
                                   "        return;\n"
                                   "    destroy()\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8361,7 +8349,7 @@ private:
                                   "    if (newCount != 0)\n"
                                   "        return;\n"
                                   "    destroy()\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8369,7 +8357,7 @@ private:
                                   "    int newCount = InterlockedDecrement(&counter);\n"
                                   "    if (newCount <= 0)\n"
                                   "        destroy();\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("void f() {\n"
@@ -8377,7 +8365,7 @@ private:
                                   "    int newCount = InterlockedDecrement(&counter);\n"
                                   "    if (0 >= newCount)\n"
                                   "        destroy;\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("", errout.str());
 
         checkInterlockedDecrement("int f() {\n"
@@ -8388,7 +8376,7 @@ private:
                                   "    } else {\n"
                                   "        return counter;\n"
                                   "    }\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:7]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("int f() {\n"
@@ -8399,7 +8387,7 @@ private:
                                   "    } else {\n"
                                   "        return counter;\n"
                                   "    }\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:7]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
 
@@ -8410,7 +8398,7 @@ private:
                                   "        return 0;\n"
                                   "    }\n"
                                   "    return counter;\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:7]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("int f() {\n"
@@ -8420,7 +8408,7 @@ private:
                                   "        return 0;\n"
                                   "    }\n"
                                   "    return counter;\n"
-                                  "}\n");
+                                  "}");
         ASSERT_EQUALS("[test.cpp:7]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("int f() {\n"
@@ -8430,8 +8418,8 @@ private:
                                   "        return 0;\n"
                                   "    } else\n"
                                   "        return counter;\n"
-                                  "    \n"
-                                  "}\n");
+                                  "   \n"
+                                  "}");
         ASSERT_EQUALS("[test.cpp:7]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
 
         checkInterlockedDecrement("int f() {\n"
@@ -8441,8 +8429,8 @@ private:
                                   "        return 0;\n"
                                   "    } else\n"
                                   "        return counter;\n"
-                                  "    \n"
-                                  "}\n");
+                                  "   \n"
+                                  "}");
         ASSERT_EQUALS("[test.cpp:7]: (error) Race condition: non-interlocked access after InterlockedDecrement(). Use InterlockedDecrement() return value instead.\n", errout.str());
     }
 
@@ -8895,12 +8883,12 @@ private:
     }
 
     void funcArgNamesDifferent() {
-        check("void func1(int a, int b, int c); \n"
+        check("void func1(int a, int b, int c);\n"
               "void func1(int a, int b, int c) { }\n"
               "void func2(int a, int b, int c);\n"
               "void func2(int A, int B, int C) { }\n"
               "class Fred {\n"
-              "    void func1(int a, int b, int c); \n"
+              "    void func1(int a, int b, int c);\n"
               "    void func2(int a, int b, int c);\n"
               "    void func3(int a = 0, int b = 0, int c = 0);\n"
               "    void func4(int a = 0, int b = 0, int c = 0);\n"
@@ -8908,7 +8896,7 @@ private:
               "void Fred::func1(int a, int b, int c) { }\n"
               "void Fred::func2(int A, int B, int C) { }\n"
               "void Fred::func3(int a, int b, int c) { }\n"
-              "void Fred::func4(int A, int B, int C) { }\n");
+              "void Fred::func4(int A, int B, int C) { }");
         ASSERT_EQUALS("[test.cpp:3] -> [test.cpp:4]: (style, inconclusive) Function 'func2' argument 1 names different: declaration 'a' definition 'A'.\n"
                       "[test.cpp:3] -> [test.cpp:4]: (style, inconclusive) Function 'func2' argument 2 names different: declaration 'b' definition 'B'.\n"
                       "[test.cpp:3] -> [test.cpp:4]: (style, inconclusive) Function 'func2' argument 3 names different: declaration 'c' definition 'C'.\n"
@@ -8957,11 +8945,11 @@ private:
 
     void shadowVariables() {
         check("int x;\n"
-              "void f() { int x; }\n");
+              "void f() { int x; }");
         ASSERT_EQUALS("[test.cpp:1] -> [test.cpp:2]: (style) Local variable \'x\' shadows outer variable\n", errout.str());
 
         check("int x();\n"
-              "void f() { int x; }\n");
+              "void f() { int x; }");
         ASSERT_EQUALS("[test.cpp:1] -> [test.cpp:2]: (style) Local variable \'x\' shadows outer function\n", errout.str());
 
         check("struct C {\n"
@@ -8973,12 +8961,12 @@ private:
         check("void f() {\n"
               "  if (cond) {int x;}\n" // <- not a shadow variable
               "  int x;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int size() {\n"
               "  int size;\n" // <- not a shadow variable
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f() {\n" // #8954 - lambda
@@ -8998,65 +8986,65 @@ private:
         check("void g(int);\n"
               "void f(int x) {\n"
               "   g((x & 0x01) >> 7);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:3]: (style) Argument '(x&0x01)>>7' to function g is always 0. It does not matter what value 'x' has.\n", errout.str());
 
         check("void g(int);\n"
               "void f(int x) {\n"
               "   g((int)((x & 0x01) >> 7));\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("[test.cpp:3]: (style) Argument '(int)((x&0x01)>>7)' to function g is always 0. It does not matter what value 'x' has.\n", errout.str());
 
         check("void g(int);\n"
               "void f(int x) {\n"
               "    g(0);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void g(int);\n"
               "void h() { return 1; }\n"
               "void f(int x) {\n"
               "    g(h());\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void g(int);\n"
               "void f(int x) {\n"
               "    g(std::strlen(\"a\"));\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void g(int);\n"
               "void f(int x) {\n"
               "    g((int)0);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void g(Foo *);\n"
               "void f() {\n"
               "    g(reinterpret_cast<Foo*>(0));\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void g(int);\n"
               "void f(int x) {\n"
               "    x = 0;\n"
               "    g(x);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void g(int);\n"
               "void f() {\n"
               "    const int x = 0;\n"
               "    g(x + 1);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void g(int);\n"
               "void f() {\n"
               "    char i = 1;\n"
               "    g(static_cast<int>(i));\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("char *yytext;\n"
@@ -9076,14 +9064,14 @@ private:
               "void g() {\n"
               "    const int x[] = { 10, 10 };\n"
               "    f(x[0]);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("void f(int);\n"
               "void g() {\n"
               "    int x[] = { 10, 10 };\n"
               "    f(x[0]);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A { int x; };"
@@ -9092,14 +9080,14 @@ private:
               "    A y;\n"
               "    y.x = 1;\n"
               "    g(y.x);\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         // allow known argument value in assert call
         check("void g(int);\n"
               "void f(int x) {\n"
               "   ASSERT((int)((x & 0x01) >> 7));\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         // #9905 - expression that does not use integer calculation at all
@@ -9146,7 +9134,7 @@ private:
               "       diff = 1;\n"
               "    }\n"
               "    return diff;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS(
             "[test.cpp:2] -> [test.cpp:5] -> [test.cpp:3] -> [test.cpp:5] -> [test.cpp:5]: (error) Comparing pointers that point to different objects\n",
             errout.str());
@@ -9157,7 +9145,7 @@ private:
               "    int* xp = &x;\n"
               "    int* yp = &y;\n"
               "    return xp > yp;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS(
             "[test.cpp:2] -> [test.cpp:4] -> [test.cpp:3] -> [test.cpp:5] -> [test.cpp:6]: (error) Comparing pointers that point to different objects\n",
             errout.str());
@@ -9166,7 +9154,7 @@ private:
               "    int x = 0;\n"
               "    int y = 1;\n"
               "    return &x > &y;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS(
             "[test.cpp:2] -> [test.cpp:4] -> [test.cpp:3] -> [test.cpp:4] -> [test.cpp:4]: (error) Comparing pointers that point to different objects\n",
             errout.str());
@@ -9178,7 +9166,7 @@ private:
               "    int* xp = &x.data;\n"
               "    int* yp = &y.data;\n"
               "    return xp > yp;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS(
             "[test.cpp:1] -> [test.cpp:5] -> [test.cpp:1] -> [test.cpp:6] -> [test.cpp:7]: (error) Comparing pointers that point to different objects\n",
             errout.str());
@@ -9190,14 +9178,14 @@ private:
               "    int* xp = &x->data;\n"
               "    int* yp = &y->data;\n"
               "    return xp > yp;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS(
             "[test.cpp:2] -> [test.cpp:3] -> [test.cpp:5] -> [test.cpp:2] -> [test.cpp:4] -> [test.cpp:6] -> [test.cpp:7]: (error) Comparing pointers that point to different objects\n",
             errout.str());
 
         check("bool f(int * xp, int* yp) {\n"
               "    return &xp > &yp;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS(
             "[test.cpp:1] -> [test.cpp:2] -> [test.cpp:1] -> [test.cpp:2] -> [test.cpp:2]: (error) Comparing pointers that point to different objects\n",
             errout.str());
@@ -9206,7 +9194,7 @@ private:
               "    int x = 0;\n"
               "    int y = 1;\n"
               "    return &x - &y;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS(
             "[test.cpp:2] -> [test.cpp:4] -> [test.cpp:3] -> [test.cpp:4] -> [test.cpp:4]: (error) Subtracting pointers that point to different objects\n",
             errout.str());
@@ -9216,17 +9204,17 @@ private:
               "    int* xp = &x[0];\n"
               "    int* yp = &x[1];\n"
               "    return xp > yp;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("bool f(int * xp, int* yp) {\n"
               "    return xp > yp;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("bool f(const int & x, const int& y) {\n"
               "    return &x > &y;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("int& g();\n"
@@ -9236,7 +9224,7 @@ private:
               "    const int* xp = &x;\n"
               "    const int* yp = &y;\n"
               "    return xp > yp;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
 
         check("struct A {int data;};\n"
@@ -9246,7 +9234,7 @@ private:
               "    int* xp = &x->data;\n"
               "    int* yp = &y->data;\n"
               "    return xp > yp;\n"
-              "}\n");
+              "}");
         ASSERT_EQUALS("", errout.str());
     }
 
