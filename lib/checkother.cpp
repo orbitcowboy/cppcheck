@@ -1349,7 +1349,7 @@ static bool isVariableMutableInInitializer(const Token* start, const Token * end
 
 void CheckOther::checkGlobalVariableNotVolatile()
 {
-    if (!mSettings->isEnabled(Settings::STYLE) || mTokenizer->isCPP())
+    if (!mSettings->severity.isEnabled(Severity::style) || mTokenizer->isCPP())
         return;
     const SymbolDatabase* const symbolDatabase = mTokenizer->getSymbolDatabase();
     // check every function
@@ -1363,7 +1363,7 @@ void CheckOther::checkGlobalVariableNotVolatile()
         for (const Token* tok = scope->bodyStart; tok && tok != scope->bodyEnd; tok = tok->next()) {
             const Variable* const var = tok->variable();
             if (var && var->isGlobal() && !var->isVolatile()) {
-                reportError(tok, Severity::style, "globalVarNotVolatile", "Global variable '" + var->name() + "' is used in interrupt service routine ('" + function->name() + "'). Declare it as 'volatile'", CWE(0U), false);
+                reportError(tok, Severity::style, "globalVarNotVolatile", "Global variable '" + var->name() + "' is used in interrupt service routine ('" + function->name() + "'). Declare it as 'volatile'", CWE(0U), Certainty::normal);
             }
         }
     }
@@ -1371,9 +1371,9 @@ void CheckOther::checkGlobalVariableNotVolatile()
 
 void CheckOther::checkMissingFuncDefinition()
 {
-    const bool style = mSettings->isEnabled(Settings::STYLE);
-    const bool inconclusive = mSettings->inconclusive;
-    const bool warning = mSettings->isEnabled(Settings::WARNING);
+    const bool style = mSettings->severity.isEnabled(Severity::style);
+    const bool inconclusive = true; //mSettings->certainty==Certainty::inconclusive;
+    const bool warning = mSettings->severity.isEnabled(Severity::warning);
 
     if (!(warning || (style && inconclusive)) || mTokenizer->isCPP())
         return;
@@ -1387,7 +1387,7 @@ void CheckOther::checkMissingFuncDefinition()
             continue;
 
         if (!function->hasBody()) {
-            reportError(nullptr, Severity::style, "missingFunctionDefinition", "This function was declared but never defined", CWE(0U), false);
+            reportError(nullptr, Severity::style, "missingFunctionDefinition", "This function was declared but never defined", CWE(0U), Certainty::normal);
         }
     }
 }
