@@ -80,6 +80,7 @@ private:
         TEST_CASE(assign18);
         TEST_CASE(assign19);
         TEST_CASE(assign20); // #9187
+        TEST_CASE(assign21); // #10186
 
         TEST_CASE(isAutoDealloc);
 
@@ -144,6 +145,8 @@ private:
         TEST_CASE(ifelse17); //  if (!!(!p))
         TEST_CASE(ifelse18);
         TEST_CASE(ifelse19);
+        TEST_CASE(ifelse20); // #10182
+        TEST_CASE(ifelse21);
 
         // switch
         TEST_CASE(switch1);
@@ -419,6 +422,20 @@ private:
               "    char *p = static_cast<int>(malloc(10));\n"
               "}", true);
         ASSERT_EQUALS("[test.cpp:3]: (error) Memory leak: p\n", errout.str());
+    }
+
+    void assign21() { // #10186
+        check("void f(int **x) {\n"
+              "    void *p = malloc(10);\n"
+              "    *x = p;\n"
+              "}", true);
+        ASSERT_EQUALS("", errout.str());
+
+        check("void f(struct str *d) {\n"
+              "    void *p = malloc(10);\n"
+              "    d->a = p;\n"
+              "}", true);
+        ASSERT_EQUALS("", errout.str());
     }
 
     void isAutoDealloc() {
@@ -1594,6 +1611,39 @@ private:
               "    a = b;\n"
               "}");
         ASSERT_EQUALS("", errout.str());
+    }
+
+    void ifelse20() {
+        check("void f() {\n"
+              "    if (x > 0)\n"
+              "        void * p1 = malloc(5);\n"
+              "    else\n"
+              "        void * p2 = malloc(2);\n"
+              "    return;\n"
+              "}");
+        ASSERT_EQUALS("[test.c:3]: (error) Memory leak: p1\n"
+                      "[test.c:5]: (error) Memory leak: p2\n", errout.str());
+
+        check("void f() {\n"
+              "    if (x > 0)\n"
+              "        void * p1 = malloc(5);\n"
+              "    else\n"
+              "        void * p2 = malloc(2);\n"
+              "}");
+        ASSERT_EQUALS("[test.c:3]: (error) Memory leak: p1\n"
+                      "[test.c:5]: (error) Memory leak: p2\n", errout.str());
+    }
+
+    void ifelse21() {
+        check("void f() {\n"
+              "    if (y) {\n"
+              "        void * p;\n"
+              "        if (x > 0)\n"
+              "            p = malloc(5);\n"
+              "    }\n"
+              "    return;\n"
+              "}");
+        ASSERT_EQUALS("[test.c:6]: (error) Memory leak: p\n",  errout.str());
     }
 
     void switch1() {
