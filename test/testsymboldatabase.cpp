@@ -346,6 +346,7 @@ private:
         TEST_CASE(symboldatabase91);
         TEST_CASE(symboldatabase92); // daca crash
         TEST_CASE(symboldatabase93); // alignas attribute
+        TEST_CASE(symboldatabase94); // structured bindings
 
         TEST_CASE(createSymbolDatabaseFindAllScopes1);
 
@@ -468,6 +469,7 @@ private:
         TEST_CASE(auto12); // #8993 - const std::string &x; auto y = x; if (y.empty()) ..
         TEST_CASE(auto13);
         TEST_CASE(auto14);
+        TEST_CASE(auto15); // C++17 auto deduction from braced-init-list
 
         TEST_CASE(unionWithConstructor);
 
@@ -4711,6 +4713,13 @@ private:
         ASSERT(scope);
     }
 
+    void symboldatabase94() { // structured bindings
+        GET_SYMBOL_DB("int foo() { auto [x,y] = xy(); return x+y; }");
+        ASSERT(db != nullptr);
+        ASSERT(db->getVariableFromVarId(1) != nullptr);
+        ASSERT(db->getVariableFromVarId(2) != nullptr);
+    }
+
     void createSymbolDatabaseFindAllScopes1() {
         GET_SYMBOL_DB("void f() { union {int x; char *p;} a={0}; }");
         ASSERT(db->scopeList.size() == 3);
@@ -8145,6 +8154,18 @@ private:
 
         tok = Token::findsimplematch(tokenizer.tokens(), "combo =");
         ASSERT(tok && !tok->valueType());
+    }
+
+    void auto15() {
+        GET_SYMBOL_DB("auto var1{3};\n"
+                      "auto var2{4.0};");
+        ASSERT_EQUALS(3, db->variableList().size());
+        const Variable *var1 = db->variableList()[1];
+        ASSERT(var1->valueType());
+        ASSERT_EQUALS(ValueType::Type::INT, var1->valueType()->type);
+        const Variable *var2 = db->variableList()[2];
+        ASSERT(var2->valueType());
+        ASSERT_EQUALS(ValueType::Type::DOUBLE, var2->valueType()->type);
     }
 
     void unionWithConstructor() {
