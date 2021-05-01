@@ -884,6 +884,9 @@ void CheckOther::unreachableCodeError(const Token *tok, bool inconclusive)
 //---------------------------------------------------------------------------
 void CheckOther::checkVariableScope()
 {
+    if (mSettings->clang)
+        return;
+
     if (!mSettings->severity.isEnabled(Severity::style))
         return;
 
@@ -1433,7 +1436,7 @@ void CheckOther::checkConstVariable()
             continue;
         if (isVariableChanged(var, mSettings, mTokenizer->isCPP()))
             continue;
-        if (Function::returnsReference(function)) {
+        if (Function::returnsReference(function) && !Function::returnsConst(function)) {
             std::vector<const Token*> returns = Function::findReturns(function);
             if (std::any_of(returns.begin(), returns.end(), [&](const Token* retTok) {
             if (retTok->varId() == var->declarationId())
@@ -1442,10 +1445,7 @@ void CheckOther::checkConstVariable()
                     retTok = retTok->astOperand2();
                 while (Token::simpleMatch(retTok, "."))
                     retTok = retTok->astOperand2();
-                const Variable* retVar = getLifetimeVariable(getParentLifetime(retTok));
-                if (!retVar)
-                    return false;
-                return retVar->declarationId() == var->declarationId();
+                return hasLifetimeToken(getParentLifetime(retTok), var->nameToken());
             }))
             continue;
         }
