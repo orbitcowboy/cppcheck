@@ -2112,16 +2112,6 @@ private:
         ASSERT_EQUALS("", errout.str());
 
         // f() can not write a (not supported yet)
-        functionVariableUsage("void f(int i) { }\n"
-                              "void foo()\n"
-                              "{\n"
-                              "    int a[10];\n"
-                              "    f(a[0]);\n"
-                              "}");
-        TODO_ASSERT_EQUALS("[test.cpp:4]: (style) Variable 'a' is not assigned a value.\n",
-                           "", errout.str());
-
-        // f() can not write a (not supported yet)
         functionVariableUsage("void f(const int & i) { }\n"
                               "void foo()\n"
                               "{\n"
@@ -2801,12 +2791,6 @@ private:
                               "}", "test.c");
         ASSERT_EQUALS("[test.c:3]: (style) Variable 'c' is assigned a value that is never used.\n", errout.str());
 
-        functionVariableUsage("void f(int c) {\n"
-                              "    int x;\n"
-                              "    if (c >> x) {}\n"
-                              "}");
-        ASSERT_EQUALS("[test.cpp:2]: (style) Variable 'x' is not assigned a value.\n", errout.str());
-
         functionVariableUsage("void f() {\n"
                               "    int x, y;\n"
                               "    std::cin >> x >> y;\n"
@@ -2819,12 +2803,6 @@ private:
                               "  c & x;\n"
                               "}");
         ASSERT_EQUALS("", errout.str());
-
-        functionVariableUsage("void f(int c) {\n"
-                              "  int x;\n"
-                              "  c & x;\n"
-                              "}");
-        ASSERT_EQUALS("[test.cpp:2]: (style) Variable 'x' is not assigned a value.\n", errout.str());
     }
 
     void localvar33() { // ticket #2345
@@ -3483,15 +3461,6 @@ private:
 
         // extracttests.start: int a[10];
         functionVariableUsage("void foo()\n"
-                              "{\n"
-                              "    int *b = a;\n"
-                              "    int *c;\n"
-                              "    *c = b[0];\n"
-                              "}");
-        ASSERT_EQUALS("[test.cpp:4]: (style) Variable 'c' is not assigned a value.\n", errout.str());
-
-        functionVariableUsage("int a[10];\n"
-                              "void foo()\n"
                               "{\n"
                               "    int *b = a;\n"
                               "    int c = b[0];\n"
@@ -5067,7 +5036,7 @@ private:
                               "void foo()\n"
                               "{\n"
                               "    struct Fred* ptr = new Fred();\n"
-                              "    free(ptr);\n"
+                              "    delete ptr;\n"
                               "}");
         ASSERT_EQUALS("[test.cpp:4]: (style) Variable 'ptr' is allocated memory that is never used.\n", errout.str());
 

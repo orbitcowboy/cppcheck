@@ -1480,6 +1480,15 @@ private:
                        "}");
         ASSERT_EQUALS("", errout.str());
 
+        // Passing array to function
+        checkUninitVar("void f(int i);\n"
+                       "void foo()\n"
+                       "{\n"
+                       "    int a[10];\n"
+                       "    f(a[0]);\n"
+                       "}");
+        ASSERT_EQUALS("[test.cpp:5]: (error) Uninitialized variable: a\n", errout.str());
+
         // Ticket #2320
         checkUninitVar("void foo() {\n"
                        "        char a[2];\n"
