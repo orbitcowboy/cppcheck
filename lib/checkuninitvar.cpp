@@ -836,11 +836,33 @@ const Token* CheckUninitVar::checkLoopBodyRecursive(const Token *start, const Va
             return nullptr;
         }
 
+        // for loop; skip third expression until loop body has been analyzed..
+        if (tok->str() == ";" && Token::simpleMatch(tok->astParent(), ";") && Token::simpleMatch(tok->astParent()->astParent(), "(")) {
+            const Token *top = tok->astParent()->astParent();
+            if (!Token::simpleMatch(top->previous(), "for (") || !Token::simpleMatch(top->link(), ") {"))
+                continue;
+            const Token *bodyStart = top->link()->next();
+            const Token *errorToken1 = checkLoopBodyRecursive(bodyStart, var, alloc, membervar, bailout);
+            if (errorToken1)
+                return errorToken1;
+            if (bailout)
+                return nullptr;
+        }
+        // for loop; skip loop body if there is third expression
+        if (Token::simpleMatch(tok, ") {") &&
+            Token::simpleMatch(tok->link()->previous(), "for (") &&
+            Token::simpleMatch(tok->link()->astOperand2(), ";")  &&
+            Token::simpleMatch(tok->link()->astOperand2()->astOperand2(), ";")) {
+            tok = tok->linkAt(1);
+        }
+
         if (tok->str() == "{") {
             const Token *errorToken1 = checkLoopBodyRecursive(tok, var, alloc, membervar, bailout);
-            if (Token::simpleMatch(tok->link(), "} else {")) {
-                const Token *elseBody = tok->link()->tokAt(2);
+            tok = tok->link();
+            if (Token::simpleMatch(tok, "} else {")) {
+                const Token *elseBody = tok->tokAt(2);
                 const Token *errorToken2 = checkLoopBodyRecursive(elseBody, var, alloc, membervar, bailout);
+                tok = elseBody->link();
                 if (errorToken1 && errorToken2)
                     return errorToken1;
                 if (errorToken2)
@@ -848,7 +870,7 @@ const Token* CheckUninitVar::checkLoopBodyRecursive(const Token *start, const Va
             }
             if (bailout)
                 return nullptr;
-            if (errorToken1)
+            if (!errorToken)
                 errorToken = errorToken1;
         }
 

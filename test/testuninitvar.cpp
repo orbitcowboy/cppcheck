@@ -1283,6 +1283,40 @@ private:
                        "    }\n"
                        "}");
         ASSERT_EQUALS("[test.cpp:4]: (error) Uninitialized variable: learn\n", errout.str());
+
+        // extracttests.start: struct Entry { Entry *next; }; Entry *buckets;
+        checkUninitVar("void foo() {\n"
+                       "  Entry *entry, *nextEntry;\n"
+                       "  for(int i = 0; i < 10; i++) {\n"
+                       "    for(entry = buckets[i]; entry != NULL; entry = nextEntry) {\n" // <- nextEntry is not uninitialized
+                       "      nextEntry = entry->next;\n"
+                       "    }\n"
+                       "  }\n"
+                       "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        checkUninitVar("void foo() {\n"
+                       "  Entry *entry, *nextEntry;\n"
+                       "  for(int i = 0; i < 10; i++) {\n"
+                       "    for(entry = buckets[i]; entry != NULL; entry = nextEntry) {\n"
+                       "    }\n"
+                       "  }\n"
+                       "}\n");
+        ASSERT_EQUALS("[test.cpp:4]: (error) Uninitialized variable: nextEntry\n", errout.str());
+
+        checkUninitVar("void f(int x) {\n"
+                       "    list *f = NULL;\n"
+                       "    list *l;\n"
+                       "\n"
+                       "    while (--x) {\n"
+                       "        if (!f)\n"
+                       "            f = c;\n"
+                       "        else\n"
+                       "            l->next = c;\n" // <- not uninitialized
+                       "        l = c;\n"
+                       "    }\n"
+                       "}\n");
+        ASSERT_EQUALS("", errout.str());
     }
 
     // switch..
