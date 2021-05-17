@@ -920,8 +920,8 @@ const Token* CheckUninitVar::checkLoopBodyRecursive(const Token *start, const Va
                 return nullptr;
             }
         } else {
-            if (const Token *errorToken = isVariableUsage(tok, var.isPointer(), alloc))
-                return errorToken;
+            if (const Token *errtok = isVariableUsage(tok, var.isPointer(), alloc))
+                return errtok;
             else if (tok->strAt(1) == "=") {
                 bool varIsUsedInRhs = false;
                 visitAstNodes(tok->next()->astOperand2(), [&](const Token * t) {
@@ -1023,7 +1023,7 @@ const Token* CheckUninitVar::isVariableUsage(const Token *vartok, bool pointer, 
     while (Token::Match(valueExpr->astParent(), ".|::") && astIsRhs(valueExpr))
         valueExpr = valueExpr->astParent();
     if (!pointer) {
-        if (Token::Match(vartok, "%name% [.(]") && vartok->variable() && !vartok->variable()->isPointer() && vartok->variable()->isClass())
+        if (Token::Match(vartok, "%name% [.(]") && vartok->variable() && !vartok->variable()->isPointer())
             return nullptr;
         while (Token::simpleMatch(valueExpr->astParent(), ".") && astIsLhs(valueExpr) && valueExpr->astParent()->valueType() && valueExpr->astParent()->valueType()->pointer == 0)
             valueExpr = valueExpr->astParent();
