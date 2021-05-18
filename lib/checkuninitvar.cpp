@@ -956,9 +956,9 @@ bool CheckUninitVar::checkLoopBody(const Token *tok, const Variable& var, const 
 
     if (!suppressErrors && !bailout && errorToken) {
         if (membervar.empty())
-            uninitvarError(errorToken, errorToken->str(), alloc);
+            uninitvarError(errorToken, errorToken->expressionString(), alloc);
         else
-            uninitStructMemberError(errorToken, errorToken->str() + "." + membervar);
+            uninitStructMemberError(errorToken, errorToken->expressionString() + "." + membervar);
         return true;
     }
 
@@ -1131,6 +1131,13 @@ const Token* CheckUninitVar::isVariableUsage(const Token *vartok, bool pointer, 
         if (lhsvar && lhsvar->isReference() && lhsvar->nameToken() == lhstok)
             return nullptr;
     }
+
+    // LHS in range for loop:
+    if (Token::simpleMatch(valueExpr->astParent(), ":") &&
+        astIsLhs(valueExpr) &&
+        valueExpr->astParent()->astParent() &&
+        Token::simpleMatch(valueExpr->astParent()->astParent()->previous(), "for ("))
+        return nullptr;
 
     // Stream read/write
     // FIXME this code is a hack!!
