@@ -1331,6 +1331,34 @@ private:
                        "}\n");
         ASSERT_EQUALS("", errout.str());
 
+        // #6952 - do-while-loop
+        checkUninitVar("void f(void)\n"
+                       "{\n"
+                       "    int* p;\n"
+                       "    do\n"
+                       "    {\n"
+                       "        if (true) {;}\n"
+                       "        else\n"
+                       "        {\n"
+                       "            return 1;\n"
+                       "        }\n"
+                       "        *p = 7;\n" // <<
+                       "        p = new int(9);\n"
+                       "    } while (*p != 8);\n"
+                       "}");
+        ASSERT_EQUALS("[test.cpp:11]: (error) Uninitialized variable: p\n", errout.str());
+
+        // #6952 - while-loop
+        checkUninitVar("void f(void)\n"
+                       "{\n"
+                       "    int* p;\n"
+                       "    while (*p != 8) {\n" // <<
+                       "        *p = 7;\n"      
+                       "        p = new int(9);\n"
+                       "    }\n"
+                       "}");
+        ASSERT_EQUALS("[test.cpp:4]: (error) Uninitialized variable: p\n", errout.str());
+
         // switch in loop
         checkUninitVar("int foo(int *p) {\n"
                        "  int x;\n"
@@ -4162,6 +4190,12 @@ private:
         checkUninitVar("void f() {\n"
                        "    int *item;\n"
                        "    for (item: itemList) {}\n"
+                       "}");
+        ASSERT_EQUALS("", errout.str());
+
+        checkUninitVar("void f() {\n"
+                       "    int buf[10];\n"
+                       "    for (int &i: buf) { i = 0; }\n"
                        "}");
         ASSERT_EQUALS("", errout.str());
     }
