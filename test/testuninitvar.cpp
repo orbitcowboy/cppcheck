@@ -1069,6 +1069,17 @@ private:
                        "}");
         ASSERT_EQUALS("", errout.str());
 
+        checkUninitVar("void foo(int *pix) {\n"
+                       "    int dest_x;\n"
+                       "    {\n"
+                       "        if (pix)\n"
+                       "            dest_x = 123;\n"
+                       "    }\n"
+                       "    if (pix)\n"
+                       "        a = dest_x;\n" // <- not uninitialized
+                       "}");
+        ASSERT_EQUALS("", errout.str());
+
         // ? :
         checkUninitVar("static void foo(int v) {\n"
                        "    int x;\n"
@@ -1353,7 +1364,7 @@ private:
                        "{\n"
                        "    int* p;\n"
                        "    while (*p != 8) {\n" // <<
-                       "        *p = 7;\n"      
+                       "        *p = 7;\n"
                        "        p = new int(9);\n"
                        "    }\n"
                        "}");
@@ -4665,6 +4676,21 @@ private:
                         "           value = 1;\n"
                         "    }\n"
                         "    printf(\"\", value);\n"
+                        "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        // function pointers
+        valueFlowUninit("int f (const struct FileFuncDefs *ffd) {\n" // #10279
+                        "  int c;\n"
+                        "  (*ffd->zread)(&c, 1);\n"
+                        "  return c;\n"
+                        "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        valueFlowUninit("int foo(unsigned int code) {\n" // #10279
+                        "  int res;\n\n"
+                        "  (* (utility_table[code])) (&res);\n"
+                        "  return (res);\n"
                         "}\n");
         ASSERT_EQUALS("", errout.str());
     }
