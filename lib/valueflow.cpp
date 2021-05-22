@@ -1270,9 +1270,8 @@ static void valueFlowPointerAliasDeref(TokenList *tokenlist)
         if (!var->isConst() && isVariableChanged(lifeTok->next(), tok, lifeTok->varId(), !var->isLocal(), tokenlist->getSettings(), tokenlist->isCPP()))
             continue;
         for (const ValueFlow::Value& v:lifeTok->values()) {
-            // TODO: Move container size values to generic forward
             // Forward uninit values since not all values can be forwarded directly
-            if (!(v.isContainerSizeValue() || v.isUninitValue()))
+            if (!v.isUninitValue())
                 continue;
             ValueFlow::Value value = v;
             value.errorPath.insert(value.errorPath.begin(), errorPath.begin(), errorPath.end());
@@ -5609,11 +5608,11 @@ static void valueFlowLibraryFunction(Token *tok, const std::string &returnValue,
 
 static void valueFlowSubFunction(TokenList* tokenlist, SymbolDatabase* symboldatabase,  ErrorLogger* errorLogger, const Settings* settings)
 {
+    int id = 0;
     for (const Scope* scope : symboldatabase->functionScopes) {
         const Function* function = scope->function;
         if (!function)
             continue;
-        int id = 0;
         for (const Token *tok = scope->bodyStart; tok != scope->bodyEnd; tok = tok->next()) {
             if (!Token::Match(tok, "%name% ("))
                 continue;
@@ -5670,7 +5669,7 @@ static void valueFlowSubFunction(TokenList* tokenlist, SymbolDatabase* symboldat
                                              argtok->expressionString() +
                                              "' value is " +
                                              v.infoString());
-                    v.path = 256 * v.path + id;
+                    v.path = 256 * v.path + id % 256;
                     // Change scope of lifetime values
                     if (v.isLifetimeValue())
                         v.lifetimeScope = ValueFlow::Value::LifetimeScope::SubFunction;
