@@ -902,8 +902,8 @@ const Token* CheckUninitVar::checkLoopBodyRecursive(const Token *start, const Va
                 continue;
             const Token *bodyStart = top->link()->next();
             const Token *errorToken1 = checkLoopBodyRecursive(bodyStart, var, alloc, membervar, bailout);
-            if (errorToken1)
-                return errorToken1;
+            if (!errorToken)
+                errorToken = errorToken1;
             if (bailout)
                 return nullptr;
         }
@@ -1242,21 +1242,6 @@ const Token* CheckUninitVar::isVariableUsage(const Token *vartok, bool pointer, 
 
         if (valueExpr->valueType() && valueExpr->valueType()->type == ValueType::Type::VOID)
             return nullptr;
-
-        // overloaded << operator to initialize variable?
-        if (Token::simpleMatch(valueExpr->astParent(), "<<") && !valueExpr->astParent()->astParent()) {
-            if (astIsLhs(valueExpr))
-                return nullptr;
-            const Token *lhs = valueExpr->astParent()->astOperand1();
-            if (Token::simpleMatch(lhs, "<<"))
-                return valueExpr;
-            if (Token::simpleMatch(lhs->previous(), "std ::"))
-                return valueExpr;
-            const Variable *var = lhs->variable();
-            if (var && (var->typeStartToken()->isStandardType() || var->typeStartToken()->isEnumType() || Token::simpleMatch(var->typeStartToken(), "std ::")))
-                return valueExpr;
-            return nullptr;
-        }
     }
     if (astIsRhs(derefValue) && isLikelyStreamRead(mTokenizer->isCPP(), derefValue->astParent()))
         return nullptr;
@@ -1525,6 +1510,8 @@ void CheckUninitVar::valueFlowUninit()
             if (v->isInconclusive())
                 continue;
             if (v->indirect > 1 || v->indirect < 0)
+                continue;
+            if (v->indirect == 0 && tok->valueType() && tok->valueType()->pointer == 0 && !isVariableUsage(tok, false, NO_ALLOC, 0))
                 continue;
             bool uninitderef = false;
             if (tok->variable()) {
