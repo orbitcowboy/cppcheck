@@ -1098,6 +1098,17 @@ const Token* CheckUninitVar::isVariableUsage(const Token *vartok, bool pointer, 
     const Token *valueExpr = vartok;   // non-dereferenced , no address of value as variable
     while (Token::Match(valueExpr->astParent(), ".|::") && astIsRhs(valueExpr))
         valueExpr = valueExpr->astParent();
+    // stuff we ignore..
+    while (valueExpr->astParent()) {
+        // *&x
+        if (valueExpr->astParent()->isUnaryOp("&") && valueExpr->astParent()->astParent() && valueExpr->astParent()->astParent()->isUnaryOp("*"))
+            valueExpr = valueExpr->astParent()->astParent();
+        // (type &)x
+        else if (valueExpr->astParent()->isCast() && valueExpr->astParent()->isUnaryOp("(") && Token::simpleMatch(valueExpr->astParent()->link()->previous(), "& )"))
+            valueExpr = valueExpr->astParent();
+        else
+            break;
+    }
     if (!pointer) {
         if (Token::Match(vartok, "%name% [.(]") && vartok->variable() && !vartok->variable()->isPointer())
             return nullptr;
@@ -1511,20 +1522,14 @@ void CheckUninitVar::valueFlowUninit()
                 continue;
             if (v->indirect > 1 || v->indirect < 0)
                 continue;
-            if (v->indirect == 0 && tok->valueType() && tok->valueType()->pointer == 0 && !isVariableUsage(tok, false, NO_ALLOC, 0))
-                continue;
             bool uninitderef = false;
             if (tok->variable()) {
                 bool unknown;
                 const bool isarray = !tok->variable() || tok->variable()->isArray();
                 const bool ispointer = astIsPointer(tok) && !isarray;
                 const bool deref = CheckNullPointer::isPointerDeRef(tok, unknown, mSettings);
-                if (ispointer && !deref) {
-                    if (v->indirect >= 1)
-                        continue;
-                    if (!isVariableUsage(tok, true, NO_ALLOC, 0))
-                        continue;
-                }
+                if (ispointer && v->indirect == 1 && !deref)
+                    continue;
                 if (isarray && !deref)
                     continue;
                 uninitderef = deref && v->indirect == 0;
@@ -1534,6 +1539,9 @@ void CheckUninitVar::valueFlowUninit()
             }
             if (!(Token::Match(tok->astParent(), ". %name% (") && uninitderef) &&
                 isVariableChanged(tok, v->indirect, mSettings, mTokenizer->isCPP()))
+                continue;
+            bool inconclusive = false;
+            if (isVariableChangedByFunctionCall(tok, v->indirect, mSettings, &inconclusive) || inconclusive)
                 continue;
             uninitvarError(tok, tok->expressionString(), v->errorPath);
             const Token* nextTok = nextAfterAstRightmostLeaf(parent);
