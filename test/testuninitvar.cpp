@@ -1619,6 +1619,18 @@ private:
                        "}");
         ASSERT_EQUALS("", errout.str());
 
+        checkUninitVar("void foo() {\n"
+                       "  char buf[1024];\n"
+                       "  char *b = (char *) (((uintptr_t) buf + 63) & ~(uintptr_t) 63);\n"
+                       "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        checkUninitVar("void foo() {\n"
+                       "  char buf[1024];\n"
+                       "  char x = *(char *) (((uintptr_t) buf + 63) & ~(uintptr_t) 63);\n"
+                       "}\n");
+        ASSERT_EQUALS("[test.cpp:3]: (error) Uninitialized variable: buf\n", errout.str());
+
         // Passing array to function
         checkUninitVar("void f(int i);\n"
                        "void foo()\n"
@@ -3504,6 +3516,15 @@ private:
                        "}\n", "test.c");
         ASSERT_EQUALS("", errout.str());
 
+        checkUninitVar("struct Cstring { char *text; int size, alloc; };\n"
+                       "int maybe();\n"
+                       "void f() {\n"
+                       "    Cstring res;\n"
+                       "    if ( ! maybe() ) return;\n"  // <- fp goes away if this is removed
+                       "    ( ((res).text = (void*)0), ((res).size = (res).alloc = 0) );\n"  // <- fp goes away if parentheses are removed
+                       "}");
+        ASSERT_EQUALS("", errout.str());
+
         {
             const char argDirectionsTestXmlData[] = "<?xml version=\"1.0\"?>\n"
                                                     "<def>\n"
@@ -4616,6 +4637,23 @@ private:
                         "    a = 1;\n"
                         "    longjmp(env, 1);\n"
                         "}");
+        ASSERT_EQUALS("", errout.str());
+
+        // range for..
+        valueFlowUninit("void f() {\n"
+                        "    X *item;\n"
+                        "    for (item: itemList) {}\n"
+                        "}");
+        ASSERT_EQUALS("", errout.str());
+
+        valueFlowUninit("X f() {\n"
+                        "    if (!itemList.empty()) {\n"
+                        "        X* item;\n"
+                        "        for(item: itemList) {}\n"
+                        "        return *item;\n"
+                        "    }\n"
+                        "    return X{};\n"
+                        "}\n");
         ASSERT_EQUALS("", errout.str());
 
         // macro_for..
