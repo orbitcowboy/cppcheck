@@ -3633,11 +3633,34 @@ private:
               "}\n");
         ASSERT_EQUALS("", errout.str());
 
+        // #10323
+        check("void foo(int x) {\n"
+              "    if(x)\n"
+              "        if(x == 1) {}\n"
+              "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        check("void foo(int x) {\n"
+              "    if(x) {}\n"
+              "    else\n"
+              "        if(x == 1) {}\n"
+              "}\n");
+        ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:4]: (style) Condition 'x==1' is always false\n", errout.str());
+
         // do not report both unsignedLessThanZero and knownConditionTrueFalse
         check("void foo(unsigned int max) {\n"
               "    unsigned int num = max - 1;\n"
               "    if (num < 0) {}\n" // <- do not report knownConditionTrueFalse
               "}");
+        ASSERT_EQUALS("", errout.str());
+
+        // #10297
+        check("void foo(size_t len, int start) {\n"
+              "    if (start < 0) {\n"
+              "        start = len+start;\n"
+              "        if (start < 0) {}\n"
+              "    }\n"
+              "}\n");
         ASSERT_EQUALS("", errout.str());
     }
 
