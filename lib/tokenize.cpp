@@ -1048,6 +1048,7 @@ void Tokenizer::simplifyTypedef()
         typedefInfo.name = typeName->str();
         typedefInfo.filename = list.file(typeName);
         typedefInfo.lineNumber = typeName->linenr();
+        typedefInfo.column = typeName->column();
         typedefInfo.used = false;
         mTypedefInfo.push_back(typedefInfo);
 
@@ -5457,6 +5458,8 @@ void Tokenizer::dump(std::ostream &out) const
             out << " isSplittedVarDeclComma=\"true\"";
         if (tok->isSplittedVarDeclEq())
             out << " isSplittedVarDeclEq=\"true\"";
+        if (tok->isImplicitInt())
+            out << " isImplicitInt=\"true\"";
         if (tok->link())
             out << " link=\"" << tok->link() << '\"';
         if (tok->varId() > 0)
@@ -5497,6 +5500,7 @@ void Tokenizer::dump(std::ostream &out) const
                 << " name=\"" << typedefInfo.name << "\""
                 << " file=\"" << typedefInfo.filename << "\""
                 << " line=\"" << typedefInfo.lineNumber << "\""
+                << " column=\"" << typedefInfo.column << "\""
                 << " used=\"" << (typedefInfo.used?1:0) << "\""
                 << "/>" << std::endl;
         }
