@@ -1044,6 +1044,14 @@ void Tokenizer::simplifyTypedef()
         bool done = false;
         bool ok = true;
 
+        TypedefInfo typedefInfo;
+        typedefInfo.name = typeName->str();
+        typedefInfo.filename = list.file(typeName);
+        typedefInfo.lineNumber = typeName->linenr();
+        typedefInfo.column = typeName->column();
+        typedefInfo.used = false;
+        mTypedefInfo.push_back(typedefInfo);
+
         while (!done) {
             std::string pattern = typeName->str();
             int scope = 0;
@@ -1254,6 +1262,8 @@ void Tokenizer::simplifyTypedef()
                 }
 
                 if (simplifyType) {
+                    mTypedefInfo.back().used = true;
+
                     // can't simplify 'operator functionPtr ()' and 'functionPtr operator ... ()'
                     if (functionPtr && (tok2->previous()->str() == "operator" ||
                                         (tok2->next() && tok2->next()->str() == "operator"))) {
@@ -5448,6 +5458,8 @@ void Tokenizer::dump(std::ostream &out) const
             out << " isSplittedVarDeclComma=\"true\"";
         if (tok->isSplittedVarDeclEq())
             out << " isSplittedVarDeclEq=\"true\"";
+        if (tok->isImplicitInt())
+            out << " isImplicitInt=\"true\"";
         if (tok->link())
             out << " link=\"" << tok->link() << '\"';
         if (tok->varId() > 0)
@@ -5480,6 +5492,20 @@ void Tokenizer::dump(std::ostream &out) const
     mSymbolDatabase->printXml(out);
     if (list.front())
         list.front()->printValueFlow(true, out);
+
+    if (!mTypedefInfo.empty()) {
+        out << "  <typedef-info>" << std::endl;
+        for (const TypedefInfo &typedefInfo: mTypedefInfo) {
+            out << "    <info"
+                << " name=\"" << typedefInfo.name << "\""
+                << " file=\"" << typedefInfo.filename << "\""
+                << " line=\"" << typedefInfo.lineNumber << "\""
+                << " column=\"" << typedefInfo.column << "\""
+                << " used=\"" << (typedefInfo.used?1:0) << "\""
+                << "/>" << std::endl;
+        }
+        out << "  </typedef-info>" << std::endl;
+    }
 }
 
 void Tokenizer::simplifyHeadersAndUnusedTemplates()

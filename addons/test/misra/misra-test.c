@@ -41,6 +41,16 @@
 #include <tgmath.h> // 21.11
 #include <fenv.h>
 
+// Check that the addon doesn't crash
+typedef struct {
+  union { // 19.2
+    struct {
+      unsigned a : 2; // 8.1
+      unsigned : 14;
+    };
+    uint16_t value;
+  };
+} STRUCT_BITS;
 
 typedef unsigned char      u8;
 typedef unsigned short     u16;
@@ -315,6 +325,8 @@ void misra_7_4(void)
    misra_7_4_const_ptr_call(1, ("text_const_call"));
    misra_7_4_call(1, "text_call"); // 7.4 11.8
 }
+
+const misra_8_1_a; // 8.1
 
 static int misra_8_2_a (int n, ...);
 extern int misra_8_2_b (int n);
@@ -1686,3 +1698,8 @@ static uint8_t misra_13_1_large_bad[1024] = { // 13.1
 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
+
+void misra_22_5(FILE *f) {
+    int x = *f; // 22.5
+    int y = f->pos; // 22.5
+}

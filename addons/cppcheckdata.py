@@ -141,6 +141,7 @@ class Token:
         isExpandedMacro    Is this token a expanded macro token
         isSplittedVarDeclComma  Is this a comma changed to semicolon in a splitted variable declaration ('int a,b;' => 'int a; int b;')
         isSplittedVarDeclEq     Is this a '=' changed to semicolon in a splitted variable declaration ('int a=5;' => 'int a; a=5;')
+        isImplicitInt      Is this token an implicit "int"?
         varId              varId for token, each variable has a unique non-zero id
         variable           Variable information for this token. See the Variable class.
         function           If this token points at a function call, this attribute has the Function
@@ -192,6 +193,7 @@ class Token:
     isExpandedMacro = False
     isSplittedVarDeclComma = False
     isSplittedVarDeclEq = False
+    isImplicitInt = False
     varId = None
     variableId = None
     variable = None
@@ -257,6 +259,8 @@ class Token:
             self.isSplittedVarDeclComma = True
         if element.get('isSplittedVarDeclEq'):
             self.isSplittedVarDeclEq = True
+        if element.get('isImplicitInt'):
+            self.isImplicitInt = True
         self.linkId = element.get('link')
         self.link = None
         if element.get('varId'):
@@ -288,9 +292,10 @@ class Token:
                 "isNumber", "isInt", "isFloat", "isString", "strlen",
                 "isChar", "isOp", "isArithmeticalOp", "isComparisonOp",
                 "isLogicalOp", "isExpandedMacro", "isSplittedVarDeclComma",
-                "isSplittedVarDeclEq","linkId", "varId", "variableId",
-                "functionId", "valuesId", "valueType", "typeScopeId",
-                "astParentId", "astOperand1Id", "file", "linenr", "column"]
+                "isSplittedVarDeclEq", "isImplicitInt", "linkId", "varId",
+                "variableId", "functionId", "valuesId", "valueType",
+                "typeScopeId", "astParentId", "astOperand1Id", "file",
+                "linenr", "column"]
         return "{}({})".format(
             "Token",
             ", ".join(("{}={}".format(a, repr(getattr(self, a))) for a in attrs))
@@ -341,6 +346,11 @@ class Token:
                 return value.intvalue
         return None
 
+    def isUnaryOp(self, op):
+        return self.astOperand1 and (self.astOperand2 is None) and self.str == op
+
+    def isBinaryOp(self):
+        return self.astOperand1 and self.astOperand2
 
 class Scope:
     """
@@ -404,7 +414,9 @@ class Scope:
         self.nestedIn = IdMap[self.nestedInId]
         self.function = IdMap[self.functionId]
         for v in self.varlistId:
-            self.varlist.append(IdMap[v])
+            value = IdMap.get(v)
+            if value:
+                self.varlist.append(value)
 
 
 class Function:
@@ -557,6 +569,23 @@ class Variable:
         self.scope = IdMap[self.scopeId]
 
 
+class TypedefInfo:
+    """
+    TypedefInfo class -- information about typedefs
+    """
+    name = None
+    filename = None
+    lineNumber = None
+    column = None
+    used = None
+
+    def __init__(self, element):
+        self.name = element.get('name')
+        self.filename = element.get('file')
+        self.lineNumber = int(element.get('line'))
+        self.column = int(element.get('column'))
+        self.used = (element.get('used') == '1')
+
 class Value:
     """
     Value class
@@ -705,6 +734,7 @@ class Configuration:
     scopes = []
     functions = []
     variables = []
+    typedefInfo = []
     valueflow = []
     standards = None
 
@@ -715,6 +745,7 @@ class Configuration:
         self.scopes = []
         self.functions = []
         self.variables = []
+        self.typedefInfo = []
         self.valueflow = []
         self.standards = Standards()
 
@@ -937,6 +968,9 @@ class CppcheckData:
         # Iterating <varlist> in a <scope>.
         iter_scope_varlist = False
 
+        # Iterating <typedef-info>
+        iter_typedef_info = False
+
         # Use iterable objects to traverse XML tree for dump files incrementally.
         # Iterative approach is required to avoid large memory consumption.
         # Calling .clear() is necessary to let the element be garbage collected.
@@ -1010,6 +1044,12 @@ class CppcheckData:
                         cfg.variables.append(var)
                     else:
                         cfg_arguments.append(var)
+
+            # Parse typedef info
+            elif node.tag == 'typedef-info':
+                iter_typedef_info = (event == 'start')
+            elif iter_typedef_info and node.tag == 'info' and event == 'start':
+                cfg.typedefInfo.append(TypedefInfo(node))
 
             # Parse valueflows (list of values)
             elif node.tag == 'valueflow' and event == 'start':
@@ -1161,3 +1201,10 @@ def reportError(location, severity, message, addon, errorId, extra=''):
         sys.stderr.write('%s (%s) %s [%s-%s]\n' % (loc, severity, message, addon, errorId))
         global EXIT_CODE
         EXIT_CODE = 1
+
+def reportSummary(dumpfile, summary_type, summary_data):
+    # dumpfile ends with ".dump"
+    ctu_info_file = dumpfile[:-4] + "ctu-info"
+    with open(ctu_info_file, 'at') as f:
+        msg = {'summary': summary_type, 'data': summary_data}
+        f.write(json.dumps(msg) + '\n')
