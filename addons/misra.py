@@ -1104,6 +1104,7 @@ class MisraChecker:
         self.existing_violations = set()
 
         self._ctu_summary_typedefs = False
+        self._ctu_summary_tagnames = False
 
     def __repr__(self):
         attrs = ["settings", "verify_expected", "verify_actual", "violations",
@@ -1132,14 +1133,12 @@ class MisraChecker:
         if len(summary) > 0:
             cppcheckdata.reportSummary(dumpfile, 'MisraTypedefInfo', summary)
 
-    def misra_2_3(self, data):
-        dumpfile = data[0]
-        typedefInfo = data[1]
-        self._save_ctu_summary_typedefs(dumpfile, typedefInfo)
+    def _save_ctu_summary_tagnames(self, dumpfile, cfg):
+        if self._ctu_summary_tagnames:
+            return
 
-    def misra_2_4(self, data):
-        dumpfile = data[0]
-        cfg = data[1]
+        self._ctu_summary_tagnames = True
+
         summary = []
         # structs/enums
         for scope in cfg.scopes:
@@ -1157,6 +1156,16 @@ class MisraChecker:
             summary.append({'name': scope.className, 'used':used, 'file': scope.bodyStart.file, 'line': scope.bodyStart.linenr, 'column': scope.bodyStart.column})
         if len(summary) > 0:
             cppcheckdata.reportSummary(dumpfile, 'MisraTagName', summary)
+
+    def misra_2_3(self, data):
+        dumpfile = data[0]
+        typedefInfo = data[1]
+        self._save_ctu_summary_typedefs(dumpfile, typedefInfo)
+
+    def misra_2_4(self, data):
+        dumpfile = data[0]
+        cfg = data[1]
+        self._save_ctu_summary_tagnames(dumpfile, cfg)
 
     def misra_2_7(self, data):
         for func in data.functions:
@@ -1383,6 +1392,11 @@ class MisraChecker:
         dumpfile = data[0]
         typedefInfo = data[1]
         self._save_ctu_summary_typedefs(dumpfile, typedefInfo)
+
+    def misra_5_7(self, data):
+        dumpfile = data[0]
+        cfg = data[1]
+        self._save_ctu_summary_tagnames(dumpfile, cfg)
 
 
     def misra_6_1(self, data):
@@ -2858,6 +2872,13 @@ class MisraChecker:
                         'fetestexcept')):
                     self.reportError(token, 21, 12)
 
+    def misra_22_5(self, cfg):
+        for token in cfg.tokenlist:
+            if token.isUnaryOp("*") or (token.isBinaryOp() and token.str == '.'):
+                fileptr = token.astOperand1
+                if fileptr.variable and cppcheckdata.simpleMatch(fileptr.variable.typeStartToken, 'FILE *'):
+                    self.reportError(token, 22, 5)
+
     def get_verify_expected(self):
         """Return the list of expected violations in the verify test"""
         return self.verify_expected
@@ -3307,6 +3328,7 @@ class MisraChecker:
             self.executeCheck(504, self.misra_5_4, cfg)
             self.executeCheck(505, self.misra_5_5, cfg)
             self.executeCheck(506, self.misra_5_6, (dumpfile, cfg.typedefInfo))
+            self.executeCheck(507, self.misra_5_7, (dumpfile, cfg))
             self.executeCheck(601, self.misra_6_1, cfg)
             self.executeCheck(602, self.misra_6_2, cfg)
             if cfgNumber == 0:
@@ -3399,6 +3421,7 @@ class MisraChecker:
             self.executeCheck(2111, self.misra_21_11, cfg)
             self.executeCheck(2112, self.misra_21_12, cfg)
             # 22.4 is already covered by Cppcheck writeReadOnlyFile
+            self.executeCheck(2205, self.misra_22_5, cfg)
 
     def analyse_ctu_info(self, files):
         all_typedef_info = []
@@ -3438,8 +3461,12 @@ class MisraChecker:
                         for old_tagname_info in all_tagname_info:
                             if old_tagname_info['name'] == new_tagname_info['name']:
                                 found = True
-                                if new_tagname_info['used']:
-                                    old_tagname_info['used'] = True
+                                if old_tagname_info['file'] != new_tagname_info['file'] or old_tagname_info['line'] != new_tagname_info['line']:
+                                    self.reportError(Location(old_tagname_info['file'], old_tagname_info['line'], old_tagname_info['column']), 5, 7)
+                                    self.reportError(Location(new_tagname_info['file'], new_tagname_info['line'], new_tagname_info['column']), 5, 7)
+                                else:
+                                    if new_tagname_info['used']:
+                                        old_tagname_info['used'] = True
                         if not found:
                             all_tagname_info.append(new_tagname_info)
 
