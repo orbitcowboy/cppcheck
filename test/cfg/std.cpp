@@ -93,6 +93,19 @@ char * overlappingWriteFunction_strcat(char *src, char *dest)
     return strcat(src, src);
 }
 
+char * overlappingWriteFunction_strncat(char *src, char *dest, const std::size_t count)
+{
+    // No warning shall be shown:
+    (void)strncat(dest, src, 42);
+    (void)strncat(dest, src, count);
+    (void)strncat(dest, dest, count);
+    // cppcheck-suppress overlappingWriteFunction
+    (void)strncat(dest, dest+1, 2);
+    char buffer[] = "strncat";
+    // cppcheck-suppress overlappingWriteFunction
+    return strncat(buffer, buffer + 1, 3);
+}
+
 wchar_t * overlappingWriteFunction_wcscpy(wchar_t *src, wchar_t *dest)
 {
     // No warning shall be shown:
