@@ -97,6 +97,7 @@ public:
         checkOther.checkPassByReference();
         checkOther.checkConstVariable();
         checkOther.checkGlobalVariableNotVolatile();
+        checkOther.checkConstPointer();
         checkOther.checkComparisonFunctionIsAlwaysTrueOrFalse();
         checkOther.checkInvalidFree();
         checkOther.clarifyStatement();
@@ -137,6 +138,7 @@ public:
     void checkPassByReference();
 
     void checkConstVariable();
+    void checkConstPointer();
 
     void checkGlobalVariableNotVolatile();
 
