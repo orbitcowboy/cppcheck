@@ -1993,6 +1993,17 @@ class MisraChecker:
                 if not isEssentiallyChar(operand2) and not isEssentiallySignedOrUnsigned(operand2):
                     self.reportError(token, 10, 2)
 
+    def misra_10_3(self, cfg):
+        for tok in cfg.tokenlist:
+            if tok.isAssignmentOp:
+                lhs = getEssentialType(tok.astOperand1)
+                rhs = getEssentialType(tok.astOperand2)
+                #print(lhs)
+                #print(rhs)
+                if lhs and rhs and bitsOfEssentialType(lhs) < bitsOfEssentialType(rhs):
+                    self.reportError(tok, 10, 3)
+
+
     def misra_10_4(self, data):
         op = {'+', '-', '*', '/', '%', '&', '|', '^', '+=', '-=', ':'}
         for token in data.tokenlist:
@@ -3384,7 +3395,7 @@ class MisraChecker:
             elif len(self.ruleTexts) == 0:
                 errmsg = 'misra violation (use --rule-texts=<file> to get proper output)'
             else:
-                return
+                errmsg = 'misra violation %s with no text in the supplied rule-texts-file' % (ruleNum)
 
             if self.severity:
                 cppcheck_severity = self.severity
@@ -3619,6 +3630,7 @@ class MisraChecker:
                 self.executeCheck(905, self.misra_9_5, cfg, data.rawTokens)
             self.executeCheck(1001, self.misra_10_1, cfg)
             self.executeCheck(1002, self.misra_10_2, cfg)
+            self.executeCheck(1003, self.misra_10_3, cfg)
             self.executeCheck(1004, self.misra_10_4, cfg)
             self.executeCheck(1006, self.misra_10_6, cfg)
             self.executeCheck(1008, self.misra_10_8, cfg)
@@ -3842,10 +3854,12 @@ Format:
 
 <..arbitrary text..>
 Appendix A Summary of guidelines
-Rule 1.1
+Rule 1.1 Required
 Rule text for 1.1
-Rule 1.2
+continuation of rule text for 1.1
+Rule 1.2 Mandatory
 Rule text for 1.2
+continuation of rule text for 1.2
 <...>
 
 '''
