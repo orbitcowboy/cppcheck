@@ -563,6 +563,32 @@ private:
                     "  return false;\n"
                     "}\n");
         ASSERT_EQUALS("test.cpp:8:style:Consider using std::any_of algorithm instead of a raw loop.\n", errout.str());
+
+        checkNormal("bool g();\n"
+                    "int f(int x) {\n"
+                    "    std::vector<int> v;\n"
+                    "    if (g())\n"
+                    "        v.emplace_back(x);\n"
+                    "    const auto n = (int)v.size();\n"
+                    "    for (int i = 0; i < n; ++i)\n"
+                    "        if (v[i] > 0)\n"
+                    "            return i;\n"
+                    "    return 0;\n"
+                    "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        checkNormal("bool g();\n"
+                    "int f(int x) {\n"
+                    "    std::vector<int> v;\n"
+                    "    if (g())\n"
+                    "        v.emplace_back(x);\n"
+                    "    const auto n = static_cast<int>(v.size());\n"
+                    "    for (int i = 0; i < n; ++i)\n"
+                    "        if (v[i] > 0)\n"
+                    "            return i;\n"
+                    "    return 0;\n"
+                    "}\n");
+        ASSERT_EQUALS("", errout.str());
     }
 
     void outOfBoundsIndexExpression() {
@@ -1394,7 +1420,8 @@ private:
     }
 
     void iterator27()
-    { // #10378
+    {
+        // #10378
         check("struct A {\n"
               "    int a;\n"
               "    int b;\n"
@@ -4739,6 +4766,22 @@ private:
               "  I i = { &x };\n"
               "  x.clear();\n"
               "  Parse(i);\n"
+              "}\n",true);
+        ASSERT_EQUALS("", errout.str());
+
+        check("void f() {\n"
+              "  std::string x;\n"
+              "  struct V {\n"
+              "    std::string* pStr{};\n"
+              "  };\n"
+              "  struct I {\n"
+              "    std::vector<V> v;\n"
+              "  };\n"
+              "  I b[] = {{{{ &x }}}};\n"
+              "  x = \"Arial\";\n"
+              "  I cb[1];\n"
+              "  for (long i = 0; i < 1; ++i)\n"
+              "    cb[i] = b[i];\n"
               "}\n",true);
         ASSERT_EQUALS("", errout.str());
     }

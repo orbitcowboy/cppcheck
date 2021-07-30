@@ -465,7 +465,8 @@ static PMEvaluateFunction evaluateAsInt(PMEvaluateFunction f, ValueFlow::Value::
         const ValueFlow::Value* value = expr->getKnownValue(t);
         if (!value)
             value = programMemory->getValue(expr->exprId());
-        if (value && value->valueType == t) {
+        if (value && value->valueType == t)
+        {
             *result = value->intvalue;
             return true;
         }
@@ -724,6 +725,12 @@ void execute(const Token* expr,
             *result = 0;
         else
             *error = true;
+    }
+    else if (expr->str() == "(" && expr->isCast()) {
+        if (Token::simpleMatch(expr->previous(), ">") && expr->previous()->link())
+            execute(expr->astOperand2(), programMemory, result, error);
+        else
+            execute(expr->astOperand1(), programMemory, result, error);
     } else
         *error = true;
 }
