@@ -1901,14 +1901,26 @@ namespace {
         }
     };
 
-    void setScopeInfo(Token *tok, ScopeInfo3 **scopeInfo)
+    void setScopeInfo(Token *tok, ScopeInfo3 **scopeInfo, bool debug=false)
     {
         if (!tok)
             return;
         if (tok->str() == "{" && (*scopeInfo)->parent && tok == (*scopeInfo)->bodyStart)
             return;
-        if (tok->str() == "}" && (*scopeInfo)->parent && tok == (*scopeInfo)->bodyEnd) {
-            *scopeInfo = (*scopeInfo)->parent;
+        if (tok->str() == "}") {
+            if ((*scopeInfo)->parent && tok == (*scopeInfo)->bodyEnd)
+                *scopeInfo = (*scopeInfo)->parent;
+            else {
+                // Try to find parent scope
+                ScopeInfo3 *parent = (*scopeInfo)->parent;
+                while (parent && parent->bodyEnd != tok)
+                    parent = parent->parent;
+                if (parent) {
+                    *scopeInfo = parent;
+                    if (debug)
+                        throw std::runtime_error("Internal error: unmatched }");
+                }
+            }
             return;
         }
         if (!Token::Match(tok, "namespace|class|struct|union %name% {|:|::|<")) {
@@ -2235,9 +2247,26 @@ bool Tokenizer::simplifyUsing()
         if (Settings::terminated())
             return substitute;
 
+        if (Token::simpleMatch(tok, "enum class")) {
+            Token *bodyStart = tok;
+            while (Token::Match(bodyStart, "%name%|:|::|<")) {
+                if (bodyStart->str() == "<")
+                    bodyStart = bodyStart->findClosingBracket();
+                bodyStart = bodyStart ? bodyStart->next() : nullptr;
+            }
+            if (Token::simpleMatch(bodyStart, "{"))
+                tok = bodyStart->link();
+            continue;
+        }
+
         if (Token::Match(tok, "{|}|namespace|class|struct|union") ||
             Token::Match(tok, "using namespace %name% ;|::")) {
-            setScopeInfo(tok, &currentScope);
+            try {
+                setScopeInfo(tok, &currentScope, mSettings->debugwarnings);
+            } catch (const std::runtime_error &e) {
+                reportError(tok, Severity::debug, "simplifyUsingUnmatchedBodyEnd",
+                            "simplifyUsing: unmatched body end");
+            }
             continue;
         }
 
@@ -2386,7 +2415,12 @@ bool Tokenizer::simplifyUsing()
 
             if ((Token::Match(tok1, "{|}|namespace|class|struct|union") && tok1->strAt(-1) != "using") ||
                 Token::Match(tok1, "using namespace %name% ;|::")) {
-                setScopeInfo(tok1, &currentScope1);
+                try {
+                    setScopeInfo(tok1, &currentScope1, mSettings->debugwarnings);
+                } catch (const std::runtime_error &e) {
+                    reportError(tok1, Severity::debug, "simplifyUsingUnmatchedBodyEnd",
+                                "simplifyUsing: unmatched body end");
+                }
                 scope1 = currentScope1->fullName;
                 if (inMemberFunc && memberFuncEnd && tok1 == memberFuncEnd) {
                     inMemberFunc = false;
@@ -2406,6 +2440,8 @@ bool Tokenizer::simplifyUsing()
 
             // check for enum with body
             if (tok1->str() == "enum") {
+                if (Token::simpleMatch(tok1, "enum class"))
+                    tok1 = tok1->next();
                 Token *defStart = tok1;
                 while (Token::Match(defStart, "%name%|::|:"))
                     defStart = defStart->next();
@@ -4501,7 +4537,7 @@ void Tokenizer::createLinks2()
 
             while (!type.empty() && type.top()->str() == "<") {
                 const Token* end = type.top()->findClosingBracket();
-                if (Token::Match(end, "> %comp%|;|.|=|{"))
+                if (Token::Match(end, "> %comp%|;|.|=|{|::"))
                     break;
                 // Variable declaration
                 if (Token::Match(end, "> %var% ;") && (type.top()->tokAt(-2) == nullptr || Token::Match(type.top()->tokAt(-2), ";|}|{")))
@@ -4509,7 +4545,8 @@ void Tokenizer::createLinks2()
                 type.pop();
             }
         } else if (token->str() == "<" &&
-                   ((token->previous() && token->previous()->isName() && !token->previous()->varId()) ||
+                   ((token->previous() && (token->previous()->isTemplate() ||
+                                           (token->previous()->isName() && !token->previous()->varId()))) ||
                     Token::Match(token->next(), ">|>>"))) {
             type.push(token);
             if (!templateToken && (token->previous()->str() == "template"))
@@ -4524,9 +4561,7 @@ void Tokenizer::createLinks2()
             if (!top2 || top2->str() != "<") {
                 if (token->str() == ">>")
                     continue;
-                if (token->next() &&
-                    !Token::Match(token->next(), "%name%|%comp%|&|&&|*|::|,|(|)|{|}|;|[|:|.|=") &&
-                    !Token::simpleMatch(token->next(), "...") &&
+                if (!Token::Match(token->next(), "%name%|%cop%|::|,|(|)|{|}|;|[|:|.|=|...") &&
                     !Token::Match(token->next(), "&& %name% ="))
                     continue;
             }
@@ -5634,8 +5669,19 @@ void Tokenizer::removeExtraTemplateKeywords()
 {
     if (isCPP()) {
         for (Token *tok = list.front(); tok; tok = tok->next()) {
-            if (Token::Match(tok, "%name%|> .|:: template %name%"))
+            if (Token::Match(tok, "%name%|>|) .|:: template %name%")) {
                 tok->next()->deleteNext();
+                Token* templateName = tok->tokAt(2);
+                while (Token::Match(templateName, "%name%|::")) {
+                    templateName->isTemplate(true);
+                    templateName = templateName->next();
+                }
+                if (Token::Match(templateName->previous(), "operator %op%|(")) {
+                    templateName->isTemplate(true);
+                    if (templateName->str() == "(" && templateName->link())
+                        templateName->link()->isTemplate(true);
+                }
+            }
         }
     }
 }

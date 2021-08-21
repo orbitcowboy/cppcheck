@@ -641,6 +641,13 @@ public:
         setFlag(fIsInline, b);
     }
 
+    bool isTemplate() const {
+        return getFlag(fIsTemplate);
+    }
+    void isTemplate(bool b) {
+        setFlag(fIsTemplate, b);
+    }
+
     bool isBitfield() const {
         return mImpl->mBits > 0;
     }
@@ -1134,6 +1141,7 @@ public:
     bool hasKnownIntValue() const;
     bool hasKnownValue() const;
     bool hasKnownValue(ValueFlow::Value::ValueType t) const;
+    bool hasKnownSymbolicValue(const Token* tok) const;
 
     const ValueFlow::Value* getKnownValue(ValueFlow::Value::ValueType t) const;
     MathLib::bigint getKnownIntValue() const {
@@ -1144,7 +1152,7 @@ public:
 
     const ValueFlow::Value* getValue(const MathLib::bigint val) const;
 
-    const ValueFlow::Value* getMaxValue(bool condition) const;
+    const ValueFlow::Value* getMaxValue(bool condition, MathLib::bigint path = 0) const;
 
     const ValueFlow::Value* getMovedValue() const;
 
@@ -1239,7 +1247,8 @@ private:
         fIsSplitVarDeclComma    = (1 << 29), // set to true when variable declarations are split up ('int a,b;' => 'int a; int b;')
         fIsSplitVarDeclEq       = (1 << 30), // set to true when variable declaration with initialization is split up ('int a=5;' => 'int a; a=5;')
         fIsImplicitInt          = (1U << 31),   // Is "int" token implicitly added?
-        fIsInline               = (1ULL << 32)  // Is this a inline type
+        fIsInline               = (1ULL << 32), // Is this a inline type
+        fIsTemplate             = (1ULL << 33)
     };
 
     Token::Type mTokType;

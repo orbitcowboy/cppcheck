@@ -233,6 +233,27 @@ private:
         return false;
     }
 
+    bool testValueOfXImpossible(const char code[], unsigned int linenr, const std::string& expr, int value)
+    {
+        // Tokenize..
+        Tokenizer tokenizer(&settings, this);
+        std::istringstream istr(code);
+        tokenizer.tokenize(istr, "test.cpp");
+
+        for (const Token* tok = tokenizer.tokens(); tok; tok = tok->next()) {
+            if (tok->str() == "x" && tok->linenr() == linenr) {
+                for (const ValueFlow::Value& val : tok->values()) {
+                    if (!val.isSymbolicValue())
+                        continue;
+                    if (val.isImpossible() && val.intvalue == value && val.tokvalue->expressionString() == expr)
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     bool testValueOfXInconclusive(const char code[], unsigned int linenr, int value) {
         // Tokenize..
         Tokenizer tokenizer(&settings, this);
@@ -263,6 +284,26 @@ private:
             if (tok->str() == "x" && tok->linenr() == linenr) {
                 for (const ValueFlow::Value &v : tok->values()) {
                     if (v.isIntValue() && !v.isImpossible() && v.intvalue == value)
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool testValueOfX(const char code[], unsigned int linenr, const std::string& expr, int value)
+    {
+        // Tokenize..
+        Tokenizer tokenizer(&settings, this);
+        std::istringstream istr(code);
+        tokenizer.tokenize(istr, "test.cpp");
+
+        for (const Token* tok = tokenizer.tokens(); tok; tok = tok->next()) {
+            if (tok->str() == "x" && tok->linenr() == linenr) {
+                for (const ValueFlow::Value& v : tok->values()) {
+                    if (v.isSymbolicValue() && !v.isImpossible() && v.intvalue == value &&
+                        v.tokvalue->expressionString() == expr)
                         return true;
                 }
             }
@@ -324,6 +365,24 @@ private:
             if (tok->str() == "x" && tok->linenr() == linenr) {
                 for (const ValueFlow::Value &v : tok->values()) {
                     if (v.valueType == type && Token::simpleMatch(v.tokvalue, value, strlen(value)))
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool testLifetimeOfX(const char code[], unsigned int linenr, const char value[], ValueFlow::Value::LifetimeScope lifetimeScope = ValueFlow::Value::LifetimeScope::Local) {
+        // Tokenize..
+        Tokenizer tokenizer(&settings, this);
+        std::istringstream istr(code);
+        tokenizer.tokenize(istr, "test.cpp");
+
+        for (const Token *tok = tokenizer.tokens(); tok; tok = tok->next()) {
+            if (tok->str() == "x" && tok->linenr() == linenr) {
+                for (const ValueFlow::Value &v : tok->values()) {
+                    if (v.isLifetimeValue() && v.lifetimeScope == lifetimeScope && Token::simpleMatch(v.tokvalue, value, strlen(value)))
                         return true;
                 }
             }
@@ -532,14 +591,14 @@ private:
                 "    auto x = [&]() { return a + 1; };\n"
                 "    auto b = x;\n"
                 "}\n";
-        ASSERT_EQUALS(true, testValueOfX(code, 4, "a + 1", ValueFlow::Value::ValueType::LIFETIME));
+        ASSERT_EQUALS(true, testLifetimeOfX(code, 4, "a + 1"));
 
         code  = "void f() {\n"
                 "    int a = 1;\n"
                 "    auto x = [=]() { return a + 1; };\n"
                 "    auto b = x;\n"
                 "}\n";
-        ASSERT_EQUALS(false, testValueOfX(code, 4, "a ;", ValueFlow::Value::ValueType::LIFETIME));
+        ASSERT_EQUALS(false, testLifetimeOfX(code, 4, "a ;"));
 
         code  = "void f(int v) {\n"
                 "    int a = v;\n"
@@ -547,14 +606,42 @@ private:
                 "    auto x = [=]() { return p + 1; };\n"
                 "    auto b = x;\n"
                 "}\n";
-        ASSERT_EQUALS(true, testValueOfX(code, 5, "a ;", ValueFlow::Value::ValueType::LIFETIME));
+        ASSERT_EQUALS(true, testLifetimeOfX(code, 5, "a ;"));
 
         code  = "void f() {\n"
                 "    std::vector<int> v;\n"
                 "    auto x = v.begin();\n"
                 "    auto it = x;\n"
                 "}\n";
-        ASSERT_EQUALS(true, testValueOfX(code, 4, "v . begin", ValueFlow::Value::ValueType::LIFETIME));
+        ASSERT_EQUALS(true, testLifetimeOfX(code, 4, "v . begin"));
+
+        code  = "void f() {\n"
+                "    std::vector<int> v;\n"
+                "    auto x = v.begin() + 1;\n"
+                "    auto it = x;\n"
+                "}\n";
+        ASSERT_EQUALS(true, testLifetimeOfX(code, 4, "v . begin"));
+
+        code  = "int* f() {\n"
+                "    std::vector<int> v;\n"
+                "    int * x = v.data();\n"
+                "    return x;\n"
+                "}\n";
+        ASSERT_EQUALS(true, testLifetimeOfX(code, 4, "v . data"));
+
+        code  = "int* f() {\n"
+                "    std::vector<int> v;\n"
+                "    int * x = v.data() + 1;\n"
+                "    return x;\n"
+                "}\n";
+        ASSERT_EQUALS(true, testLifetimeOfX(code, 4, "v . data"));
+
+        code  = "int f(int* a) {\n"
+                "    int **p = &a;\n"
+                "    int * x = *p;\n"
+                "    return x; \n"
+                "}\n";
+        ASSERT_EQUALS(false, testLifetimeOfX(code, 4, "a"));
 
         code  = "void f() {\n"
                 "    int i = 0;\n"
@@ -2537,7 +2624,7 @@ private:
                "    while (11 != (x = dostuff()) && y) {}\n"
                "    a = x;\n"
                "}";
-        TODO_ASSERT_EQUALS(true, false, testValueOfX(code, 3U, 11));
+        ASSERT_EQUALS(true, testValueOfX(code, 3U, 11));
 
         code = "void f(int x) {\n"
                "    while (x = dostuff()) {}\n"
@@ -4990,7 +5077,7 @@ private:
                "    if (s != \"hello\")\n"
                "        s[40] = c;\n"
                "}";
-        ASSERT_EQUALS("", isImpossibleContainerSizeValue(tokenValues(code, "s ["), 5));
+        ASSERT(!isImpossibleContainerSizeValue(tokenValues(code, "s ["), 5).empty());
 
         code = "void f() {\n"
                "    static std::string s;\n"
@@ -6041,6 +6128,61 @@ private:
                "  return x;\n"
                "}\n";
         ASSERT_EQUALS(false, testValueOfXKnown(code, 3U, "y", 0));
+
+        code = "int f(int i, int j) {\n"
+               "    if (i == j) {\n"
+               "        int x = i - j;\n"
+               "        return x;\n"
+               "    }\n"
+               "    return 0;\n"
+               "}\n";
+        ASSERT_EQUALS(true, testValueOfXKnown(code, 4U, 0));
+
+        code = "void f(int x, int y) {\n"
+               "    if (x == y) {\n"
+               "        int a = x;\n"
+               "    }\n"
+               "}";
+        ASSERT_EQUALS(true, testValueOfXKnown(code, 3U, "y", 0));
+
+        code = "void f(int x, int y) {\n"
+               "    if (x != y) {\n"
+               "        int a = x;\n"
+               "    }\n"
+               "}";
+        ASSERT_EQUALS(true, testValueOfXImpossible(code, 3U, "y", 0));
+
+        code = "void f(int x, int y) {\n"
+               "    if (x < y) {\n"
+               "        int a = x;\n"
+               "    }\n"
+               "}";
+        ASSERT_EQUALS(true, testValueOfX(code, 3U, "y", -1));
+        ASSERT_EQUALS(true, testValueOfXImpossible(code, 3U, "y", 0));
+
+        code = "void f(int x, int y) {\n"
+               "    if (x <= y) {\n"
+               "        int a = x;\n"
+               "    }\n"
+               "}";
+        ASSERT_EQUALS(true, testValueOfX(code, 3U, "y", 0));
+        ASSERT_EQUALS(true, testValueOfXImpossible(code, 3U, "y", 1));
+
+        code = "void f(int x, int y) {\n"
+               "    if (x > y) {\n"
+               "        int a = x;\n"
+               "    }\n"
+               "}";
+        ASSERT_EQUALS(true, testValueOfX(code, 3U, "y", 1));
+        ASSERT_EQUALS(true, testValueOfXImpossible(code, 3U, "y", 0));
+
+        code = "void f(int x, int y) {\n"
+               "    if (x >= y) {\n"
+               "        int a = x;\n"
+               "    }\n"
+               "}";
+        ASSERT_EQUALS(true, testValueOfX(code, 3U, "y", 0));
+        ASSERT_EQUALS(true, testValueOfXImpossible(code, 3U, "y", -1));
     }
 };
 

@@ -1740,12 +1740,15 @@ void Token::printValueFlow(bool xml, std::ostream &out) const
                     break;
                 case ValueFlow::Value::ValueType::LIFETIME:
                     out << "lifetime=\"" << value.tokvalue << '\"';
+                    out << " lifetime-scope=\"" << ValueFlow::Value::toString(value.lifetimeScope) << "\"";
+                    out << " lifetime-kind=\"" << ValueFlow::Value::toString(value.lifetimeKind) << "\"";
                     break;
                 case ValueFlow::Value::ValueType::SYMBOLIC:
-                    out << "tokvalue=\"" << value.tokvalue << '\"';
-                    out << " intvalue=\"" << value.intvalue << '\"';
+                    out << "symbolic=\"" << value.tokvalue << '\"';
+                    out << " symbolic-delta=\"" << value.intvalue << '\"';
                     break;
                 }
+                out << " bound=\"" << ValueFlow::Value::toString(value.bound) << "\"";
                 if (value.condition)
                     out << " condition-line=\"" << value.condition->linenr() << '\"';
                 if (value.isKnown())
@@ -1756,6 +1759,7 @@ void Token::printValueFlow(bool xml, std::ostream &out) const
                     out << " impossible=\"true\"";
                 else if (value.isInconclusive())
                     out << " inconclusive=\"true\"";
+                out << " path=\"" << value.path << "\"";
                 out << "/>" << std::endl;
             }
 
@@ -1981,6 +1985,8 @@ static bool removeContradiction(std::list<ValueFlow::Value>& values)
                 continue;
             if (x.isImpossible() == y.isImpossible())
                 continue;
+            if (x.isSymbolicValue() && !ValueFlow::Value::sameToken(x.tokvalue, y.tokvalue))
+                continue;
             if (!x.equalValue(y)) {
                 auto compare = [](const ValueFlow::Value& x, const ValueFlow::Value& y) {
                     return x.compareValue(y, ValueFlow::less{});
@@ -2061,6 +2067,8 @@ static void mergeAdjacent(std::list<ValueFlow::Value>& values)
                 continue;
             if (x->valueKind != y->valueKind)
                 continue;
+            if (x->isSymbolicValue() && !ValueFlow::Value::sameToken(x->tokvalue, y->tokvalue))
+                continue;
             if (x->bound != y->bound) {
                 if (y->bound != ValueFlow::Value::Bound::Point && isAdjacent(*x, *y)) {
                     adjValues.clear();
@@ -2131,19 +2139,29 @@ static void removeContradictions(std::list<ValueFlow::Value>& values)
     }
 }
 
+bool sameValueType(const ValueFlow::Value& x, const ValueFlow::Value& y)
+{
+    if (x.valueType != y.valueType)
+        return false;
+    // Symbolic are the same type if they share the same tokvalue
+    if (x.isSymbolicValue())
+        return x.tokvalue->exprId() == 0 || x.tokvalue->exprId() == y.tokvalue->exprId();
+    return true;
+}
+
 bool Token::addValue(const ValueFlow::Value &value)
 {
     if (value.isKnown() && mImpl->mValues) {
         // Clear all other values of the same type since value is known
         mImpl->mValues->remove_if([&](const ValueFlow::Value& x) {
-            if (x.valueType != value.valueType)
-                return false;
-            // Allow multiple known symbolic values
-            if (x.isSymbolicValue())
-                return !x.isKnown();
-            return true;
+            return sameValueType(x, value);
         });
     }
+
+    // assert(!value.isPossible() || !mImpl->mValues || std::none_of(mImpl->mValues->begin(), mImpl->mValues->end(),
+    // [&](const ValueFlow::Value& x) {
+    //     return x.isKnown() && sameValueType(x, value);
+    // }));
 
     if (mImpl->mValues) {
         // Don't handle more than 10 values for performance reasons
@@ -2385,6 +2403,16 @@ bool Token::hasKnownValue(ValueFlow::Value::ValueType t) const
     });
 }
 
+bool Token::hasKnownSymbolicValue(const Token* tok) const
+{
+    if (tok->exprId() == 0)
+        return false;
+    return mImpl->mValues &&
+           std::any_of(mImpl->mValues->begin(), mImpl->mValues->end(), [&](const ValueFlow::Value& value) {
+        return value.isSymbolicValue() && value.tokvalue && value.tokvalue->exprId() == tok->exprId();
+    });
+}
+
 const ValueFlow::Value* Token::getKnownValue(ValueFlow::Value::ValueType t) const
 {
     if (!mImpl->mValues)
@@ -2420,7 +2448,7 @@ const ValueFlow::Value* Token::getValue(const MathLib::bigint val) const
     return it == mImpl->mValues->end() ? nullptr : &*it;
 }
 
-const ValueFlow::Value* Token::getMaxValue(bool condition) const
+const ValueFlow::Value* Token::getMaxValue(bool condition, MathLib::bigint path) const
 {
     if (!mImpl->mValues)
         return nullptr;
@@ -2429,6 +2457,8 @@ const ValueFlow::Value* Token::getMaxValue(bool condition) const
         if (!value.isIntValue())
             continue;
         if (value.isImpossible())
+            continue;
+        if (value.path != 0 && value.path != path)
             continue;
         if ((!ret || value.intvalue > ret->intvalue) &&
             ((value.condition != nullptr) == condition))

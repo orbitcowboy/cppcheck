@@ -80,10 +80,11 @@ namespace ValueFlow {
     public:
         typedef std::pair<const Token *, std::string> ErrorPathItem;
         typedef std::list<ErrorPathItem> ErrorPath;
+        enum class Bound { Upper, Lower, Point };
 
-        explicit Value(long long val = 0)
+        explicit Value(long long val = 0, Bound b = Bound::Point)
             : valueType(ValueType::INT),
-            bound(Bound::Point),
+            bound(b),
             intvalue(val),
             tokvalue(nullptr),
             floatValue(0.0),
@@ -101,7 +102,9 @@ namespace ValueFlow {
             lifetimeScope(LifetimeScope::Local),
             valueKind(ValueKind::Possible)
         {}
-        Value(const Token *c, long long val);
+        Value(const Token* c, long long val, Bound b = Bound::Point);
+
+        static Value unknown();
 
         bool equalValue(const ValueFlow::Value& rhs) const {
             if (valueType != rhs.valueType)
@@ -135,7 +138,7 @@ namespace ValueFlow {
                     return false;
                 break;
             case ValueType::SYMBOLIC:
-                if (tokvalue != rhs.tokvalue)
+                if (!sameToken(tokvalue, rhs.tokvalue))
                     return false;
                 if (intvalue != rhs.intvalue)
                     return false;
@@ -185,7 +188,7 @@ namespace ValueFlow {
         template<class Compare>
         bool compareValue(const Value& rhs, Compare compare) const {
             assert((!this->isSymbolicValue() && !rhs.isSymbolicValue()) ||
-                   (this->valueType == rhs.valueType && this->tokvalue == rhs.tokvalue));
+                   (this->valueType == rhs.valueType && sameToken(this->tokvalue, rhs.tokvalue)));
             bool result = false;
             visitValue(
                 *this,
@@ -307,7 +310,7 @@ namespace ValueFlow {
         }
 
         /** The value bound  */
-        enum class Bound { Upper, Lower, Point } bound;
+        Bound bound;
 
         /** int value (or sometimes bool value?) */
         long long intvalue;
@@ -366,6 +369,8 @@ namespace ValueFlow {
 
         static const char* toString(MoveKind moveKind);
         static const char* toString(LifetimeKind lifetimeKind);
+        static const char* toString(LifetimeScope lifetimeScope);
+        static const char* toString(Bound bound);
 
         /** How known is this value */
         enum class ValueKind {
@@ -420,6 +425,8 @@ namespace ValueFlow {
         bool errorSeverity() const {
             return !condition && !defaultArg;
         }
+
+        static bool sameToken(const Token* tok1, const Token* tok2);
     };
 
     /// Constant folding of expression. This can be used before the full ValueFlow has been executed (ValueFlow::setValues).
@@ -435,6 +442,8 @@ namespace ValueFlow {
     const ValueFlow::Value* findValue(const std::list<ValueFlow::Value>& values,
                                       const Settings* settings,
                                       std::function<bool(const ValueFlow::Value&)> pred);
+
+    std::vector<ValueFlow::Value> isOutOfBounds(const Value& size, const Token* indexTok, bool possible = true);
 }
 
 struct LifetimeToken {
