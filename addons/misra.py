@@ -1867,7 +1867,7 @@ class MisraChecker:
             #
             # TODO: We actually need to check if the names of the arguments are
             # the same. But we can't do this because we have no links to
-            # variables in the arguments in function defintion in the dump file.
+            # variables in the arguments in function definition in the dump file.
             foundVariables = 0
             while startCall and startCall != endCall:
                 if startCall.varId:
@@ -1975,11 +1975,11 @@ class MisraChecker:
             if var.nameToken is None:
                 continue
             if var.isExtern:
-                extern_vars.append(var.nameToken)
+                extern_vars.append(var.nameToken.str)
             else:
                 var_defs.append(var.nameToken)
         for vartok in var_defs:
-            if vartok not in extern_vars:
+            if vartok.str not in extern_vars:
                 self.reportError(vartok, 8, 4)
 
     def misra_8_5(self, dumpfile, cfg):
@@ -2265,7 +2265,8 @@ class MisraChecker:
                     e = getEssentialType(token.astOperand2)
                 if not e:
                     continue
-                if bitsOfEssentialType(vt1.type) > bitsOfEssentialType(e):
+                lhsbits = vt1.bits if vt1.bits else bitsOfEssentialType(vt1.type)
+                if lhsbits > bitsOfEssentialType(e):
                     self.reportError(token, 10, 6)
             except ValueError:
                 pass
