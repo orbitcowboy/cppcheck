@@ -120,7 +120,6 @@ private:
         TEST_CASE(valueFlowSameExpression);
 
         TEST_CASE(valueFlowUninit);
-        TEST_CASE(valueFlowUninitBreak);
 
         TEST_CASE(valueFlowConditionExpressions);
 
@@ -4652,52 +4651,6 @@ private:
         ASSERT_EQUALS(0, values.size());
     }
 
-    void valueFlowUninitBreak() { // break uninit analysis to avoid extra warnings
-        const char *code;
-        std::list<ValueFlow::Value> values;
-
-        code = "struct wcsstruct {\n"
-               "    int *wcsprm;\n"
-               "};\n"
-               "\n"
-               "void copy_wcs(wcsstruct *wcsin) {\n"
-               "    wcsstruct *x;\n"
-               "    memcpy(wcsin, x, sizeof(wcsstruct));\n" // <- True positive
-               "    x->wcsprm = NULL;\n" // <- False positive
-               "}";
-        values = tokenValues(code, "x . wcsprm", ValueFlow::Value::ValueType::UNINIT);
-        ASSERT_EQUALS(0, values.size());
-
-        code = "struct wcsstruct {\n"
-               "    int *wcsprm;\n"
-               "};\n"
-               "\n"
-               "void copy_wcs(wcsstruct *wcsin) {\n"
-               "    wcsstruct *x;\n"
-               "    sizeof(x);\n"
-               "    x->wcsprm = NULL;\n" // <- Warn
-               "}";
-        values = tokenValues(code, "x . wcsprm", ValueFlow::Value::ValueType::UNINIT);
-        ASSERT_EQUALS(1, values.size());
-
-        code = "struct wcsstruct {\n"
-               "    int *wcsprm;\n"
-               "};\n"
-               "\n"
-               "void init_wcs(wcsstruct *x) { if (x->wcsprm != NULL); }\n" // <- False positive
-               "\n"
-               "void copy_wcs() {\n"
-               "    wcsstruct *x;\n"
-               "    x->wcsprm = NULL;\n" // <- True positive
-               "    init_wcs(x);\n" // <- False positive
-               "}";
-        values = tokenValues(code, "x . wcsprm != NULL", ValueFlow::Value::ValueType::UNINIT);
-        ASSERT_EQUALS(0, values.size());
-        values = tokenValues(code, "x )", ValueFlow::Value::ValueType::UNINIT);
-        ASSERT_EQUALS(0, values.size());
-
-    }
-
     void valueFlowConditionExpressions() {
         const char* code;
 
@@ -5223,6 +5176,13 @@ private:
                "        s = x;\n"
                "}";
         ASSERT(tokenValues(code, "s . size").empty());
+
+        code = "void f() {\n"
+               "    const uint8_t data[] = { 1, 2, 3 };\n"
+               "    std::vector<uint8_t> v{ data, data + sizeof(data) };\n"
+               "    v.size();\n"
+               "}";
+        TODO_ASSERT_EQUALS("", "ContainerSizeValue", isKnownContainerSizeValue(tokenValues(code, "v . size"), 3)); // TODO: extract container size
 
         // valueFlowContainerForward, loop
         code = "void f() {\n"
