@@ -166,6 +166,7 @@ private:
         TEST_CASE(checkSuspiciousSemicolon1);
         TEST_CASE(checkSuspiciousSemicolon2);
         TEST_CASE(checkSuspiciousSemicolon3);
+        TEST_CASE(checkSuspiciousComparison);
 
         TEST_CASE(checkInvalidFree);
 
@@ -6437,6 +6438,14 @@ private:
               "    return i >= 0;\n"
               "}\n", &settings1);
         ASSERT_EQUALS("", errout.str());
+
+        // #10612
+        check("void f(void) {\n"
+              "   const uint32_t x = 0;\n"
+              "   constexpr const auto y = 0xFFFFU;\n"
+              "   if (y < x) {}\n"
+              "}");
+        ASSERT_EQUALS("[test.cpp:4]: (style) Checking if unsigned expression 'y' is less than zero.\n", errout.str());
     }
 
     void checkSignOfPointer() {
@@ -6717,6 +6726,19 @@ private:
                "void foo() {\n"
                "  if (x == 123);\n"
                "  REQUIRE(y=z);\n"
+               "}");
+        ASSERT_EQUALS("", errout.str());
+    }
+
+    void checkSuspiciousComparison() {
+        checkP("void f(int a, int b) {\n"
+               "  a > b;\n"
+               "}");
+        ASSERT_EQUALS("[test.cpp:2]: (warning, inconclusive) Found suspicious operator '>'\n", errout.str());
+
+        checkP("void f() {\n" // #10607
+               "  for (auto p : m)\n"
+               "    std::vector<std::pair<std::string, std::string>> k;\n"
                "}");
         ASSERT_EQUALS("", errout.str());
     }
