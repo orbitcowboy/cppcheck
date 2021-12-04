@@ -3335,6 +3335,19 @@ private:
             ASSERT_EQUALS(true, tok1->link() == tok2);
             ASSERT_EQUALS(true, tok2->link() == tok1);
         }
+
+        {
+            // #10615
+            const char code[] = "struct A : public B<__is_constructible()>{};\n";
+            errout.str("");
+            Tokenizer tokenizer(&settings0, this);
+            std::istringstream istr(code);
+            ASSERT(tokenizer.tokenize(istr, "test.cpp"));
+            const Token* tok1 = Token::findsimplematch(tokenizer.tokens(), "< >");
+            const Token* tok2 = Token::findsimplematch(tok1, "> { } >");
+            ASSERT_EQUALS(true, tok1->link() == tok2);
+            ASSERT_EQUALS(true, tok2->link() == tok1);
+        }
     }
 
     void simplifyString() {
@@ -6711,6 +6724,10 @@ private:
                             "constexpr void constexpr_for_fold_impl([[maybe_unused]] Functor&& f, std::index_sequence<Indices...>) noexcept {\n"
                             "    (std::forward<Functor>(f).template operator() < First + Indices > (), ...);\n"
                             "}\n"));
+
+        // #9301
+        ASSERT_NO_THROW(tokenizeAndStringify("template <typename> constexpr char x[] = \"\";\n"
+                                             "template <> constexpr char x<int>[] = \"\";\n"));
     }
 
     void checkNamespaces() {
