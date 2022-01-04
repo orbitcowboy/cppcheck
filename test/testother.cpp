@@ -2646,6 +2646,10 @@ private:
         check("struct S { void f(); int i; };\n"
               "void call_f(S& s) { (s.*(&S::f))(); }\n");
         ASSERT_EQUALS("", errout.str());
+
+        check("struct S { int a[1]; };\n"
+              "void f(S& s) { int* p = s.a; *p = 0; }\n");
+        ASSERT_EQUALS("", errout.str());
     }
 
     void constParameterCallback() {
@@ -5626,12 +5630,32 @@ private:
         ASSERT_EQUALS("", errout.str());
     }
 
-    void duplicateExpressionTemplate() { // #6930
-        check("template <int I> void f() {\n"
+    void duplicateExpressionTemplate() {
+        check("template <int I> void f() {\n" // #6930
               "    if (I >= 0 && I < 3) {}\n"
               "}\n"
               "\n"
               "static auto a = f<0>();");
+        ASSERT_EQUALS("", errout.str());
+
+        check("template<typename T>\n" // #7754
+              "void f() {\n"
+              "    if (std::is_same_v<T, char> || std::is_same_v<T, unsigned char>) {}\n"
+              "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        check("typedef long long int64_t;"
+              "template<typename T>\n"
+              "void f() {\n"
+              "    if (std::is_same_v<T, long> || std::is_same_v<T, int64_t>) {}\n"
+              "}\n");
+        ASSERT_EQUALS("", errout.str());
+
+        checkP("#define int32_t int"
+               "template<typename T>\n"
+               "void f() {\n"
+               "    if (std::is_same_v<T, int> || std::is_same_v<T, int32_t>) {}\n"
+               "}\n");
         ASSERT_EQUALS("", errout.str());
     }
 

@@ -4883,6 +4883,12 @@ static void valueFlowForwardAssign(Token* const tok,
     if (vars.size() == 1 && vars.front()->isStatic() && init)
         lowerToPossible(values);
 
+    // is volatile
+    if (std::any_of(vars.begin(), vars.end(), [&](const Variable* var) {
+        return var->isVolatile();
+    }))
+        lowerToPossible(values);
+
     // Skip RHS
     const Token * nextExpression = tok->astParent() ? nextAfterAstRightmostLeaf(tok->astParent()) : tok->next();
 
@@ -5093,6 +5099,10 @@ static void valueFlowAfterSwap(TokenList* tokenlist,
                 continue;
             std::vector<Token*> args = astFlatten(tok->next()->astOperand2(), ",");
             if (args.size() != 2)
+                continue;
+            if (args[0]->exprId() == 0)
+                continue;
+            if (args[1]->exprId() == 0)
                 continue;
             for (int i = 0; i < 2; i++) {
                 std::vector<const Variable*> vars = getVariables(args[0]);
