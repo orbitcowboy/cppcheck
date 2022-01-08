@@ -893,7 +893,7 @@ void SymbolDatabase::createSymbolDatabaseNeedInitialization()
                             if (var.isClass()) {
                                 if (var.type()) {
                                     // does this type need initialization?
-                                    if (var.type()->needInitialization == Type::NeedInitialization::True)
+                                    if (var.type()->needInitialization == Type::NeedInitialization::True && !var.hasDefault())
                                         needInitialization = true;
                                     else if (var.type()->needInitialization == Type::NeedInitialization::Unknown) {
                                         if (!(var.valueType() && var.valueType()->type == ValueType::CONTAINER))
@@ -1840,6 +1840,7 @@ void SymbolDatabase::validate() const
     if (mSettings->debugwarnings) {
         validateExecutableScopes();
     }
+    // TODO
     //validateVariables();
 }
 
@@ -4441,6 +4442,9 @@ static const Token* skipPointersAndQualifiers(const Token* tok)
 
 bool Scope::isVariableDeclaration(const Token* const tok, const Token*& vartok, const Token*& typetok) const
 {
+    if (!tok)
+        return false;
+
     const bool isCPP = check && check->mTokenizer->isCPP();
 
     if (isCPP && Token::Match(tok, "throw|new"))
@@ -5323,17 +5327,6 @@ const Scope *SymbolDatabase::findScopeByName(const std::string& name) const
     for (const Scope &scope: scopeList) {
         if (scope.className == name)
             return &scope;
-    }
-    return nullptr;
-}
-
-//---------------------------------------------------------------------------
-
-Scope *Scope::findInNestedList(const std::string & name)
-{
-    for (Scope *scope: nestedList) {
-        if (scope->className == name)
-            return scope;
     }
     return nullptr;
 }

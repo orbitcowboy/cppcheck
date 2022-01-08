@@ -1966,9 +1966,6 @@ struct ValueFlowAnalyzer : Analyzer {
 
     virtual ProgramState getProgramState() const = 0;
 
-    virtual const ValueType* getValueType(const Token*) const {
-        return nullptr;
-    }
     virtual int getIndirect(const Token* tok) const {
         const ValueFlow::Value* value = getValue(tok);
         if (value)
@@ -2638,10 +2635,6 @@ struct ExpressionAnalyzer : SingleValueFlowAnalyzer {
         setupExprVarIds(expr);
         if (val.isSymbolicValue())
             setupExprVarIds(val.tokvalue);
-    }
-
-    virtual const ValueType* getValueType(const Token*) const OVERRIDE {
-        return expr->valueType();
     }
 
     static bool nonLocal(const Variable* var, bool deref) {
@@ -6792,6 +6785,9 @@ static void valueFlowUninit(TokenList* tokenlist, SymbolDatabase* /*symbolDataba
                 continue;
             for (const Variable& memVar : scope->varlist) {
                 if (!memVar.isPublic())
+                    continue;
+                // Skip array since we cant track partial initialization from nested subexpressions
+                if (memVar.isArray())
                     continue;
                 if (!needsInitialization(&memVar, tokenlist->isCPP())) {
                     partial = true;
