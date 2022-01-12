@@ -710,8 +710,7 @@ void CheckUnusedVar::checkFunctionVariableUsage_iterateScopes(const Scope* const
                      i->typeEndToken()->isStandardType() ||
                      isRecordTypeWithoutSideEffects(i->type()) ||
                      mSettings->library.detectContainer(i->typeStartToken(), /*iterator*/ false) ||
-                     (i->isStlType() &&
-                      !Token::Match(i->typeStartToken()->tokAt(2), "lock_guard|unique_lock|shared_ptr|unique_ptr|auto_ptr|shared_lock")))
+                     i->isStlType())
                 type = Variables::standard;
             if (type == Variables::none || isPartOfClassStructUnion(i->typeStartToken()))
                 continue;
@@ -1181,6 +1180,9 @@ void CheckUnusedVar::checkFunctionVariableUsage()
             const bool isInitialization = (Token::Match(tok, "%var% (|{") && tok->variable() && tok->variable()->nameToken() == tok);
             const bool isIncrementOrDecrement = (tok->tokType() == Token::Type::eIncDecOp);
             if (!isAssignment && !isInitialization && !isIncrementOrDecrement)
+                continue;
+
+            if (isInitialization && Token::Match(tok, "%var% { }")) // don't warn for trivial initialization
                 continue;
 
             if (isIncrementOrDecrement && tok->astParent() && precedes(tok, tok->astOperand1()))
