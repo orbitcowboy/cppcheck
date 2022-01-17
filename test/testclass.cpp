@@ -173,6 +173,7 @@ private:
         TEST_CASE(const68); // ticket #6471
         TEST_CASE(const69); // ticket #9806
         TEST_CASE(const70); // variadic template can receive more arguments than in its definition
+        TEST_CASE(const71); // ticket #10146
         TEST_CASE(const_handleDefaultParameters);
         TEST_CASE(const_passThisToMemberOfOtherClass);
         TEST_CASE(assigningPointerToPointerIsNotAConstOperation);
@@ -443,6 +444,19 @@ private:
                                   "    A(int, int y=2) {}"
                                   "};");
         ASSERT_EQUALS("[test.cpp:1]: (style) Struct 'A' has a constructor with 1 argument that is not explicit.\n", errout.str());
+
+        checkExplicitConstructors("struct Foo {\n"
+                                  "    template <typename T>\n"
+                                  "    explicit constexpr Foo(T) {}\n"
+                                  "};\n"
+                                  "struct Bar {\n"
+                                  "    template <typename T>\n"
+                                  "    constexpr explicit Bar(T) {}\n"
+                                  "};\n"
+                                  "struct Baz {\n"
+                                  "    explicit constexpr Baz(int) {}\n"
+                                  "};\n");
+        ASSERT_EQUALS("", errout.str());
     }
 
 #define checkDuplInheritedMembers(code) checkDuplInheritedMembers_(code, __FILE__, __LINE__)
@@ -5769,6 +5783,19 @@ private:
                    "        call(1, 2);\n"
                    "    }\n"
                    "};");
+        ASSERT_EQUALS("", errout.str());
+    }
+
+    void const71() { // #10146
+        checkConst("struct Bar {\n"
+                   "    int j = 5;\n"
+                   "    void f(int& i) const { i += j; }\n"
+                   "};\n"
+                   "struct Foo {\n"
+                   "    Bar bar;\n"
+                   "    int k{};\n"
+                   "    void g() { bar.f(k); }\n"
+                   "};\n");
         ASSERT_EQUALS("", errout.str());
     }
 
