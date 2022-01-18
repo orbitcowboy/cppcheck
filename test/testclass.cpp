@@ -174,6 +174,7 @@ private:
         TEST_CASE(const69); // ticket #9806
         TEST_CASE(const70); // variadic template can receive more arguments than in its definition
         TEST_CASE(const71); // ticket #10146
+        TEST_CASE(const72); // ticket #10520
         TEST_CASE(const_handleDefaultParameters);
         TEST_CASE(const_passThisToMemberOfOtherClass);
         TEST_CASE(assigningPointerToPointerIsNotAConstOperation);
@@ -445,7 +446,7 @@ private:
                                   "};");
         ASSERT_EQUALS("[test.cpp:1]: (style) Struct 'A' has a constructor with 1 argument that is not explicit.\n", errout.str());
 
-        checkExplicitConstructors("struct Foo {\n"
+        checkExplicitConstructors("struct Foo {\n" // #10515
                                   "    template <typename T>\n"
                                   "    explicit constexpr Foo(T) {}\n"
                                   "};\n"
@@ -5797,6 +5798,92 @@ private:
                    "    void g() { bar.f(k); }\n"
                    "};\n");
         ASSERT_EQUALS("", errout.str());
+
+        checkConst("struct S {\n"
+                   "    A a;\n"
+                   "    void f(int j, int*& p) {\n"
+                   "        p = &(((a[j])));\n"
+                   "    }\n"
+                   "};\n");
+        ASSERT_EQUALS("", errout.str());
+    }
+
+    void const72() { // #10520
+        checkConst("struct S {\n"
+                   "    explicit S(int* p) : mp(p) {}\n"
+                   "    int* mp{};\n"
+                   "};\n"
+                   "struct C {\n"
+                   "    int i{};\n"
+                   "    S f() { return S{ &i }; }\n"
+                   "};\n");
+        ASSERT_EQUALS("", errout.str());
+
+        checkConst("struct S {\n"
+                   "    explicit S(int* p) : mp(p) {}\n"
+                   "    int* mp{};\n"
+                   "};\n"
+                   "struct C {\n"
+                   "    int i{};\n"
+                   "    S f() { return S(&i); }\n"
+                   "};\n");
+        ASSERT_EQUALS("", errout.str());
+
+        checkConst("struct S {\n"
+                   "    int* mp{};\n"
+                   "};\n"
+                   "struct C {\n"
+                   "    int i{};\n"
+                   "    S f() { return S{ &i }; }\n"
+                   "};\n");
+        ASSERT_EQUALS("", errout.str());
+
+        checkConst("struct S {\n"
+                   "    int* mp{};\n"
+                   "};\n"
+                   "struct C {\n"
+                   "    int i{};\n"
+                   "    S f() { return { &i }; }\n"
+                   "};\n");
+        ASSERT_EQUALS("", errout.str());
+
+        checkConst("struct S {\n"
+                   "    explicit S(const int* p) : mp(p) {}\n"
+                   "    const int* mp{};\n"
+                   "};\n"
+                   "struct C {\n"
+                   "    int i{};\n"
+                   "    S f() { return S{ &i }; }\n"
+                   "};\n");
+        TODO_ASSERT_EQUALS("[test.cpp:7]: (style, inconclusive) Technically the member function 'C::f' can be const.\n", "", errout.str());
+
+        checkConst("struct S {\n"
+                   "    explicit S(const int* p) : mp(p) {}\n"
+                   "    const int* mp{};\n"
+                   "};\n"
+                   "struct C {\n"
+                   "    int i{};\n"
+                   "    S f() { return S(&i); }\n"
+                   "};\n");
+        TODO_ASSERT_EQUALS("[test.cpp:7]: (style, inconclusive) Technically the member function 'C::f' can be const.\n", "", errout.str());
+
+        checkConst("struct S {\n"
+                   "    const int* mp{};\n"
+                   "};\n"
+                   "struct C {\n"
+                   "    int i{};\n"
+                   "    S f() { return S{ &i }; }\n"
+                   "};\n");
+        TODO_ASSERT_EQUALS("[test.cpp:7]: (style, inconclusive) Technically the member function 'C::f' can be const.\n", "", errout.str());
+
+        checkConst("struct S {\n"
+                   "    const int* mp{};\n"
+                   "};\n"
+                   "struct C {\n"
+                   "    int i{};\n"
+                   "    S f() { return { &i }; }\n"
+                   "};\n");
+        TODO_ASSERT_EQUALS("[test.cpp:7]: (style, inconclusive) Technically the member function 'C::f' can be const.\n", "", errout.str());
     }
 
     void const_handleDefaultParameters() {

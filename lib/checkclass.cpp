@@ -2135,6 +2135,8 @@ bool CheckClass::checkConstFunc(const Scope *scope, const Function *func, bool& 
                 return false;
 
             const Token* lhs = tok1->previous();
+            if (lhs->str() == "(" && tok1->astParent() && tok1->astParent()->astParent())
+                lhs = tok1->astParent()->astParent();
             if (lhs->str() == "&") {
                 lhs = lhs->previous();
                 if (lhs->isAssignmentOp() && lhs->previous()->variable()) {
@@ -2227,8 +2229,8 @@ bool CheckClass::checkConstFunc(const Scope *scope, const Function *func, bool& 
             return false;
         }
 
-        // function call..
-        else if (Token::Match(tok1, "%name% (") && !tok1->isStandardType() &&
+        // function/constructor call, return init list
+        else if ((Token::Match(tok1, "%name% (|{") || Token::simpleMatch(tok1->astParent(), "return {")) && !tok1->isStandardType() &&
                  !Token::Match(tok1, "return|if|string|switch|while|catch|for")) {
             if (isMemberFunc(scope, tok1) && tok1->strAt(-1) != ".") {
                 if (!isConstMemberFunc(scope, tok1))
@@ -2242,7 +2244,7 @@ bool CheckClass::checkConstFunc(const Scope *scope, const Function *func, bool& 
             for (const Token* tok2 = lpar->next(); tok2 && tok2 != tok1->next()->link(); tok2 = tok2->next()) {
                 if (tok2->str() == "(")
                     tok2 = tok2->link();
-                else if (tok2->isName() && isMemberVar(scope, tok2)) {
+                else if ((tok2->isName() && isMemberVar(scope, tok2)) || (tok2->isUnaryOp("&") && (tok2 = tok2->astOperand1()))) {
                     const Variable* var = tok2->variable();
                     if (!var || !var->isMutable())
                         return false; // TODO: Only bailout if function takes argument as non-const reference
