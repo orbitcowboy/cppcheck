@@ -18,18 +18,29 @@
 
 #include "statsdialog.h"
 
-#include <QPrinter>
+#include "checkstatistics.h"
+#include "common.h"
+#include "projectfile.h"
+
+#include <QClipboard>
 #include <QDate>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QMimeData>
+#include <QPrinter>
 #include <QTextDocument>
 #include <QWidget>
-#include <QClipboard>
-#include <QMimeData>
 
-#include "projectfile.h"
-#include "checkstatistics.h"
-#include "common.h"
+#ifdef HAVE_QCHART
+#include <QAbstractSeries>
+#include <QChartView>
+#include <QDateTimeAxis>
+#include <QLineSeries>
+#include <QTextStream>
+#include <QValueAxis>
+
+using namespace QtCharts;
+#endif
 
 static const QString CPPCHECK("cppcheck");
 
