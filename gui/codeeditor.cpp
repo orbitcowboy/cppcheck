@@ -18,9 +18,10 @@
 
 #include "codeeditor.h"
 
-#include <QShortcut>
-#include <QPainter>
 #include "codeeditorstyle.h"
+
+#include <QPainter>
+#include <QShortcut>
 
 
 Highlighter::Highlighter(QTextDocument *parent,
@@ -336,7 +337,11 @@ int CodeEditor::lineNumberAreaWidth()
         ++digits;
     }
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
+    int space = 3 + fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits;
+#else
     int space = 3 + fontMetrics().width(QLatin1Char('9')) * digits;
+#endif
     return space;
 }
 
