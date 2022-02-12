@@ -28,10 +28,10 @@
 #include "symboldatabase.h"
 #include "token.h"
 #include "tokenize.h"
-#include "utils.h"
 #include "valueflow.h"
 
 #include "checkuninitvar.h" // CheckUninitVar::isVariableUsage
+#include "checkclass.h" // CheckClass::stl_containers_not_const
 
 #include <algorithm> // find_if()
 #include <cctype>
@@ -40,6 +40,7 @@
 #include <memory>
 #include <ostream>
 #include <set>
+#include <type_traits>
 #include <utility>
 #include <numeric>
 
@@ -1546,11 +1547,21 @@ void CheckOther::checkConstVariable()
         if (var->isReference()) {
             bool callNonConstMethod = false;
             for (const Token* tok = var->nameToken(); tok != scope->bodyEnd && tok != nullptr; tok = tok->next()) {
-                if (tok->variable() == var && Token::Match(tok, "%var% . * ( & %name% ::")) {
-                    const Token *ftok = tok->linkAt(3)->previous();
-                    if (!ftok->function() || !ftok->function()->isConst())
-                        callNonConstMethod = true;
-                    break;
+                if (tok->variable() == var) {
+                    if (Token::Match(tok, "%var% . * ( & %name% ::")) {
+                        const Token* ftok = tok->linkAt(3)->previous();
+                        if (!ftok->function() || !ftok->function()->isConst())
+                            callNonConstMethod = true;
+                        break;
+                    }
+                    if (var->isStlType() && Token::Match(tok, "%var% [")) { // containers whose operator[] is non-const
+                        const Token* typeTok = var->typeStartToken() ? var->typeStartToken()->tokAt(2) : nullptr;
+                        const auto& notConst = CheckClass::stl_containers_not_const;
+                        if (typeTok && notConst.find(typeTok->str()) != notConst.end()) {
+                            callNonConstMethod = true;
+                            break;
+                        }
+                    }
                 }
             }
             if (callNonConstMethod)
@@ -3293,7 +3304,10 @@ static const Token *findShadowed(const Scope *scope, const std::string &varname,
     }
     if (scope->type == Scope::eLambda)
         return nullptr;
-    return findShadowed(scope->nestedIn, varname, linenr);
+    const Token* shadowed = findShadowed(scope->nestedIn, varname, linenr);
+    if (!shadowed)
+        shadowed = findShadowed(scope->functionOf, varname, linenr);
+    return shadowed;
 }
 
 void CheckOther::checkShadowVariables()
@@ -3325,6 +3339,8 @@ void CheckOther::checkShadowVariables()
             }
 
             const Token *shadowed = findShadowed(scope.nestedIn, var.name(), var.nameToken()->linenr());
+            if (!shadowed)
+                shadowed = findShadowed(scope.functionOf, var.name(), var.nameToken()->linenr());
             if (!shadowed)
                 continue;
             if (scope.type == Scope::eFunction && scope.className == var.name())

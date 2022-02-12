@@ -42,6 +42,7 @@
 #include <limits>
 #include <stack>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 //---------------------------------------------------------------------------
@@ -754,7 +755,7 @@ void SymbolDatabase::createSymbolDatabaseClassInfo()
     for (Type& type : typeList) {
         // finish filling in base class info
         for (Type::BaseInfo & i : type.derivedFrom) {
-            const Type* found = findType(i.nameTok, type.enclosingScope);
+            const Type* found = findType(i.nameTok, type.enclosingScope, /*lookOutside*/ true);
             if (found && found->findDependency(&type)) {
                 // circular dependency
                 //mTokenizer->syntaxError(nullptr);
@@ -5495,7 +5496,7 @@ const Scope *SymbolDatabase::findScope(const Token *tok, const Scope *startScope
 
 //---------------------------------------------------------------------------
 
-const Type* SymbolDatabase::findType(const Token *startTok, const Scope *startScope) const
+const Type* SymbolDatabase::findType(const Token *startTok, const Scope *startScope, bool lookOutside) const
 {
     // skip over struct or union
     if (Token::Match(startTok, "struct|union"))
@@ -5540,6 +5541,9 @@ const Type* SymbolDatabase::findType(const Token *startTok, const Scope *startSc
                 type = scope1->definedType;
                 if (type)
                     return type;
+            } else if (scope->type == Scope::ScopeType::eNamespace && lookOutside) {
+                scope = scope->nestedIn;
+                continue;
             } else
                 break;
         }

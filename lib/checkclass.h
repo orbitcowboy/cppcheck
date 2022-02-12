@@ -23,9 +23,7 @@
 
 #include "check.h"
 #include "config.h"
-#include "symboldatabase.h"
 #include "tokenize.h"
-#include "utils.h"
 
 #include <cstddef>
 #include <list>
@@ -37,6 +35,11 @@
 class ErrorLogger;
 class Settings;
 class Token;
+class Function;
+class Scope;
+class SymbolDatabase;
+class Type;
+class Variable;
 
 namespace CTU {
     class FileInfo;
@@ -187,6 +190,9 @@ public:
 
     /** @brief Analyse all file infos for all TU */
     bool analyseWholeProgram(const CTU::FileInfo *ctu, const std::list<Check::FileInfo*> &fileInfo, const Settings& settings, ErrorLogger &errorLogger) override;
+
+    /** @brief Set of the STL types whose operator[] is not const */
+    static const std::set<std::string> stl_containers_not_const;
 
 private:
     const SymbolDatabase *mSymbolDatabase;

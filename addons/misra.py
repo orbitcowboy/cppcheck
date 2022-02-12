@@ -422,6 +422,28 @@ def get_type_conversion_to_from(token):
 
     return None
 
+
+def is_composite_expr(expr, composite_operator=False):
+    """MISRA C 2012, section 8.10.3"""
+    if expr is None:
+        return False
+
+    if not composite_operator:
+        if (expr.str in ('+', '-', '*', '/', '%', '&', '|', '^', '>>', "<<", "?", ":", '~')):
+            return is_composite_expr(expr.astOperand1,True) or is_composite_expr(expr.astOperand2, True)
+        if expr.str == '?' and simpleMatch(expr.astOperand2, ':'):
+            colon = expr.astOperand2
+            return is_composite_expr(colon.astOperand1,True) or is_composite_expr(colon.astOperand2, True)
+        return False
+
+    # non constant expression?
+    if expr.isNumber:
+        return False
+    if expr.astOperand1 or expr.astOperand2:
+        return is_composite_expr(expr.astOperand1,True) or is_composite_expr(expr.astOperand2, True)
+    return True
+
+
 def getEssentialTypeCategory(expr):
     if not expr:
         return None
@@ -1009,16 +1031,14 @@ def isNoReturnScope(tok):
 
 
 # Return the token which the value is assigned to
-def getAssignedVariableToken(valueToken):
-    if not valueToken:
+def getAssignedVariableToken(vartok):
+    if not vartok:
         return None
-    if not valueToken.astParent:
-        return None
-    operator = valueToken.astParent
-    if operator.isAssignmentOp:
-        return operator.astOperand1
-    if operator.isArithmeticalOp:
-        return getAssignedVariableToken(operator)
+    parent = vartok.astParent
+    while parent and parent.isArithmeticalOp:
+        parent = parent.astParent
+    if parent and parent.isAssignmentOp:
+        return parent.astOperand1
     return None
 
 # If the value is used as a return value, return the function definition
@@ -1759,41 +1779,9 @@ class MisraChecker:
                 self.reportError(tok, 7, 1)
 
     def misra_7_2(self, data):
-        # Large constant numbers that are assigned to a variable should have an
-        # u/U suffix if the variable type is unsigned.
-        def reportErrorIfMissingSuffix(variable, value):
-            if 'U' in value.str.upper():
-                return
-            if value and value.isNumber:
-                if variable and variable.valueType and variable.valueType.sign == 'unsigned':
-                    if variable.valueType.type in ['char', 'short', 'int', 'long', 'long long']:
-                        limit = 1 << (bitsOfEssentialType(variable.valueType.type) -1)
-                        v = value.getKnownIntValue()
-                        if v is not None and v >= limit:
-                            self.reportError(value, 7, 2)
-
         for token in data.tokenlist:
-            # Check normal variable assignment
-            if token.valueType and token.isNumber:
-                variable = getAssignedVariableToken(token)
-                reportErrorIfMissingSuffix(variable, token)
-
-            # Check use as function parameter
-            if isFunctionCall(token) and token.astOperand1 and token.astOperand1.function:
-                functionDeclaration = token.astOperand1.function
-
-                if functionDeclaration.tokenDef:
-                    if functionDeclaration.tokenDef is token.astOperand1:
-                        # Token is not a function call, but it is the definition of the function
-                        continue
-
-                    parametersUsed = getArguments(token)
-                    for i in range(len(parametersUsed)):
-                        usedParameter = parametersUsed[i]
-                        if usedParameter.isNumber:
-                            parameterDefinition = functionDeclaration.argument.get(i+1)
-                            if parameterDefinition and parameterDefinition.nameToken:
-                                reportErrorIfMissingSuffix(parameterDefinition.nameToken, usedParameter)
+            if token.isInt and ('U' not in token.str.upper()) and token.valueType and token.valueType.sign == 'unsigned':
+                self.reportError(token, 7, 2)
 
     def misra_7_3(self, rawTokens):
         compiled = re.compile(r'^[0-9.]+[Uu]*l+[Uu]*$')
@@ -2277,8 +2265,7 @@ class MisraChecker:
         for token in data.tokenlist:
             if token.str != '=' or not token.astOperand1 or not token.astOperand2:
                 continue
-            if (token.astOperand2.str not in ('+', '-', '*', '/', '%', '&', '|', '^', '>>', "<<", "?", ":", '~') and
-                    not isCast(token.astOperand2)):
+            if not is_composite_expr(token.astOperand2):
                 continue
             vt1 = token.astOperand1.valueType
             vt2 = token.astOperand2.valueType

@@ -2769,6 +2769,11 @@ private:
               "    T& g(C& c, T C::*f) { return c.*f; }\n"
               "};\n");
         ASSERT_EQUALS("", errout.str());
+
+        check("void f(std::map<int, int>& m) {\n"
+              "    std::cout << m[0] << std::endl;\n"
+              "};\n");
+        ASSERT_EQUALS("", errout.str());
     }
 
     void constParameterCallback() {
@@ -9473,6 +9478,29 @@ private:
               "    }\n"
               "};");
         ASSERT_EQUALS("", errout.str());
+
+        check("struct S {\n"
+              "    int i{};\n"
+              "    void f() { int i; }\n"
+              "};\n");
+        ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:3]: (style) Local variable 'i' shadows outer variable\n", errout.str());
+
+        check("struct S {\n"
+              "    int i{};\n"
+              "    std::vector<int> v;\n"
+              "    void f() const { for (const int& i : v) {} }\n"
+              "};\n");
+        ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:4]: (style) Local variable 'i' shadows outer variable\n", errout.str());
+
+        check("struct S {\n" // #10405
+              "    F* f{};\n"
+              "    std::list<F> fl;\n"
+              "    void S::f() const;\n"
+              "};\n"
+              "void S::f() const {\n"
+              "    for (const F& f : fl) {}\n"
+              "};\n");
+        ASSERT_EQUALS("[test.cpp:2] -> [test.cpp:7]: (style) Local variable 'f' shadows outer variable\n", errout.str());
     }
 
     void knownArgument() {

@@ -28,6 +28,7 @@
 #include "settings.h"
 #include "symboldatabase.h"
 #include "token.h"
+#include "utils.h"
 #include "valueflow.h"
 #include "valueptr.h"
 
@@ -3338,8 +3339,11 @@ bool FwdAnalysis::possiblyAliased(const Token *expr, const Token *startToken) co
                 if (tok->function() && tok->function()->getArgumentVar(argnr) && !tok->function()->getArgumentVar(argnr)->isReference() && !tok->function()->isConst())
                     continue;
                 for (const Token *subexpr = expr; subexpr; subexpr = subexpr->astOperand1()) {
-                    if (isSameExpression(mCpp, macro, subexpr, args[argnr], mLibrary, pure, followVar))
-                        return true;
+                    if (isSameExpression(mCpp, macro, subexpr, args[argnr], mLibrary, pure, followVar)) {
+                        const Scope* scope = expr->scope(); // if there is no other variable, assume no aliasing
+                        if (scope->varlist.size() > 1)
+                            return true;
+                    }
                 }
             }
             continue;
