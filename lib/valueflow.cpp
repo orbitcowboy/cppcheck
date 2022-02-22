@@ -4138,6 +4138,7 @@ static void valueFlowLifetime(TokenList *tokenlist, SymbolDatabase*, ErrorLogger
             };
 
             bool update = false;
+            // cppcheck-suppress varid0
             auto captureVariable = [&](const Token* tok2, Lambda::Capture c, std::function<bool(const Token*)> pred) {
                 if (varids.count(tok->varId()) > 0)
                     return;
@@ -6071,9 +6072,12 @@ static void valueFlowForLoopSimplify(Token* const bodyStart,
 
         }
         const Token* vartok = expr;
-        const Token* rml = nextAfterAstRightmostLeaf(expr);
+        const Token* rml = nextAfterAstRightmostLeaf(vartok);
         if (rml)
-            vartok = rml->previous();
+            vartok = rml->str() == "]" ? rml : rml->previous();
+        if (vartok->str() == "]" && vartok->link()->previous())
+            vartok = vartok->link()->previous();
+
         if ((tok2->str() == "&&" &&
              conditionIsFalse(tok2->astOperand1(),
                               getProgramMemory(tok2->astTop(), expr, ValueFlow::Value(value), settings))) ||
@@ -6870,6 +6874,12 @@ static bool needsInitialization(const Variable* var, bool cpp)
 static void addToErrorPath(ValueFlow::Value& value, const ValueFlow::Value& from)
 {
     std::unordered_set<const Token*> locations;
+    std::transform(value.errorPath.begin(),
+                   value.errorPath.end(),
+                   std::inserter(locations, locations.begin()),
+                   [](const ErrorPathItem& e) {
+        return e.first;
+    });
     if (from.condition && !value.condition)
         value.condition = from.condition;
     std::copy_if(from.errorPath.begin(),

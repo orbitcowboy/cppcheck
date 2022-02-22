@@ -4107,8 +4107,21 @@ private:
                "void b(S& s) {\n"
                "    for (*s.a = 1;;)\n"
                "        if (0) {}\n"
+               "}\n"
+               "struct T { S s; };\n"
+               "void b(T& t) {\n"
+               "    for (*&t.s.a[0] = 1;;)\n"
+               "        if (0) {}\n"
                "}\n";
-        testValueOfX(code, 0, 0); // <- don't crash
+        testValueOfX(code, 0, 0); // <- don't throw
+
+        code = "void f() {\n"
+               "    int p[2];\n"
+               "    for (p[0] = 0; p[0] <= 2; p[0]++) {\n"
+               "        for (p[1] = 0; p[1] <= 2 - p[0]; p[1]++) {}\n"
+               "    }\n"
+               "}\n";
+        testValueOfX(code, 0, 0); // <- don't throw
     }
 
     void valueFlowSubFunction() {
@@ -6305,6 +6318,23 @@ private:
                "  d(&f->a, c);\n"
                "}\n";
         valueOfTok(code, "f");
+
+        code = "struct bo {\n"
+               "  int b, c, a, d;\n"
+               "  char e, g, h, i, aa, j, k, l, m, n, o, p, q, r, t, u, v, w, x, y;\n"
+               "  long z, ab, ac, ad, f, ae, af, ag, ah, ai, aj, ak, al, am, an, ao, ap, aq, ar,\n"
+               "      as;\n"
+               "  short at, au, av, aw, ax, ay, az, ba, bb, bc, bd, be, bf, bg, bh, bi, bj, bk,\n"
+               "      bl, bm;\n"
+               "};\n"
+               "char bn;\n"
+               "void bp() {\n"
+               "  bo s;\n"
+               "  if (bn)\n"
+               "    return;\n"
+               "  s;\n"
+               "}\n";
+        valueOfTok(code, "s");
     }
 
     void valueFlowHang() {
