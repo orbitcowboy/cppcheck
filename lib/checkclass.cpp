@@ -666,6 +666,8 @@ bool CheckClass::isBaseClassFunc(const Token *tok, const Scope *scope)
                 if (func.tokenDef->str() == tok->str())
                     return true;
             }
+            if (isBaseClassFunc(tok, derivedFrom->classScope))
+                return true;
         }
 
         // Base class not found so assume it is in it.
@@ -2037,6 +2039,9 @@ bool CheckClass::isMemberVar(const Scope *scope, const Token *tok) const
             return true;
         } else if (Token::simpleMatch(tok->tokAt(-3), "( * this )")) {
             return true;
+        } else if (Token::Match(tok->tokAt(-3), "%name% ) . %name%")) {
+            tok = tok->tokAt(-3);
+            again = true;
         } else if (Token::Match(tok->tokAt(-2), "%name% . %name%")) {
             tok = tok->tokAt(-2);
             again = true;
