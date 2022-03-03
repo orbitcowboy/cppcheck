@@ -102,6 +102,7 @@ private:
         TEST_CASE(noConstructor11); // ticket #3552
         TEST_CASE(noConstructor12); // #8951 - member initialization
         TEST_CASE(noConstructor13); // #9998
+        TEST_CASE(noConstructor14); // #10770
 
         TEST_CASE(forwardDeclaration); // ticket #4290/#3190
 
@@ -695,6 +696,17 @@ private:
               "struct A {\n"
               "    A() {}\n"
               "    B b;\n"
+              "};\n");
+        ASSERT_EQUALS("", errout.str());
+    }
+
+    void noConstructor14() { // #10770
+        check("typedef void (*Func)();\n"
+              "class C {\n"
+              "public:\n"
+              "    void f();\n"
+              "private:\n"
+              "    Func fp = nullptr;\n"
               "};\n");
         ASSERT_EQUALS("", errout.str());
     }
@@ -1854,6 +1866,17 @@ private:
               "void Fred::operator=(const Fred &f)\n"
               "{ }", true);
         ASSERT_EQUALS("[test.cpp:13]: (warning, inconclusive) Member variable 'Fred::ints' is not assigned a value in 'Fred::operator='.\n", errout.str());
+
+        Settings s;
+        s.certainty.setEnabled(Certainty::inconclusive, true);
+        s.severity.enable(Severity::style);
+        s.severity.enable(Severity::warning);
+        LOAD_LIB_2(s.library, "std.cfg");
+        check("struct S {\n"
+              "    S& operator=(const S& s) { return *this; }\n"
+              "    std::mutex m;\n"
+              "};\n", s);
+        ASSERT_EQUALS("", errout.str());
     }
 
     void uninitVar1() {
