@@ -7628,14 +7628,25 @@ static void valueFlowContainerSize(TokenList *tokenlist, SymbolDatabase* symbold
             continue;
         if (!var->valueType() || !var->valueType()->container)
             continue;
-        if (!astIsContainer(var->nameToken()))
+        const Token* const vnt = var->nameToken();
+        if (!astIsContainer(vnt))
             continue;
-        if (var->nameToken()->hasKnownValue(ValueFlow::Value::ValueType::CONTAINER_SIZE))
+        if (vnt->hasKnownValue(ValueFlow::Value::ValueType::CONTAINER_SIZE))
             continue;
-        if (!Token::Match(var->nameToken(), "%name% ;") &&
-            !(Token::Match(var->nameToken(), "%name% {") && Token::simpleMatch(var->nameToken()->next()->link(), "} ;")))
+        const bool isDecl = Token::Match(vnt, "%name% ;");
+        bool hasInitList = false, hasInitSize = false, isPointerInit = false;
+        if (!isDecl) {
+            hasInitList = Token::Match(vnt, "%name% {") && Token::simpleMatch(vnt->next()->link(), "} ;");
+            if (!hasInitList)
+                hasInitList = Token::Match(vnt, "%name% ( {") && Token::simpleMatch(vnt->linkAt(2), "} ) ;");
+            if (!hasInitList)
+                hasInitSize = Token::Match(vnt, "%name% (|{ %num%|%var% )|}");
+            if (!hasInitList && !hasInitSize)
+                isPointerInit = Token::Match(vnt, "%name% ( %var% ,");
+        }
+        if (!isDecl && !hasInitList && !hasInitSize && !isPointerInit)
             continue;
-        if (var->nameToken()->astTop() && Token::Match(var->nameToken()->astTop()->previous(), "for|while"))
+        if (vnt->astTop() && Token::Match(vnt->astTop()->previous(), "for|while"))
             known = !isVariableChanged(var, settings, true);
         if (var->valueType()->container->size_templateArgNo >= 0) {
             if (var->dimensions().size() == 1 && var->dimensions().front().known)
@@ -7646,12 +7657,41 @@ static void valueFlowContainerSize(TokenList *tokenlist, SymbolDatabase* symbold
         values.back().valueType = ValueFlow::Value::ValueType::CONTAINER_SIZE;
         if (known)
             values.back().setKnown();
-        if (Token::simpleMatch(var->nameToken()->next(), "{")) {
-            const Token* initList = var->nameToken()->next();
+        if (hasInitList) {
+            const Token* initList = vnt->next();
+            if (Token::simpleMatch(initList, "("))
+                initList = initList->next();
             values = getInitListSize(initList, var->valueType()->container, known);
         }
+        else if (hasInitSize) {
+            const Token* sizeTok = vnt->next()->astOperand2();
+            if (!sizeTok || !sizeTok->hasKnownIntValue())
+                continue;
+            values.back().intvalue = sizeTok->getKnownIntValue();
+        }
+        else if (isPointerInit) { // (ptr, ptr + size)
+            const Token* commaTok = vnt->next()->astOperand2();
+            if (commaTok && commaTok->str() == "," && commaTok->astOperand1() && commaTok->astOperand2() && commaTok->astOperand2()->isArithmeticalOp() && commaTok->astOperand2()->str() == "+") {
+                const Token* varTok1 = commaTok->astOperand1();
+                const Token* plusTok = commaTok->astOperand2();
+                if (varTok1->varId() && plusTok->astOperand1() && plusTok->astOperand2() && varTok1->valueType() && varTok1->valueType()->pointer) {
+                    const Token* sizeTok = nullptr;
+                    if (varTok1->varId() == plusTok->astOperand1()->varId())
+                        sizeTok = plusTok->astOperand2();
+                    else if (varTok1->varId() == plusTok->astOperand2()->varId())
+                        sizeTok = plusTok->astOperand1();
+                    if (!sizeTok || !sizeTok->hasKnownIntValue())
+                        continue;
+                    values.back().intvalue = sizeTok->getKnownIntValue();
+                }
+                else
+                    continue;
+            }
+            else
+                continue;
+        }
         for (const ValueFlow::Value& value : values)
-            valueFlowContainerForward(var->nameToken()->next(), var->nameToken(), value, tokenlist);
+            valueFlowContainerForward(vnt->next(), vnt, value, tokenlist);
     }
 
     // after assignment
