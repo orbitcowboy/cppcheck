@@ -16,36 +16,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "scratchpad.h"
+#ifndef smallvectorH
+#define smallvectorH
 
-#include "mainwindow.h"
+#include <cstddef>
 
-#include "ui_scratchpad.h"
+static constexpr std::size_t DefaultSmallVectorSize = 0;
 
-ScratchPad::ScratchPad(MainWindow& mainWindow)
-    : QDialog(&mainWindow)
-    , mUI(new Ui::ScratchPad)
-    , mMainWindow(mainWindow)
+#ifdef HAVE_BOOST
+#include <boost/container/small_vector.hpp>
+
+template<typename T, std::size_t N = DefaultSmallVectorSize>
+using SmallVector = boost::container::small_vector<T, N>;
+#else
+#include <vector>
+
+template<class T, std::size_t N>
+struct TaggedAllocator : std::allocator<T>
 {
-    mUI->setupUi(this);
+    template<class ... Ts>
+    TaggedAllocator(Ts&&... ts)
+        : std::allocator<T>(std::forward<Ts>(ts)...)
+    {}
+};
 
-    connect(mUI->mCheckButton, &QPushButton::clicked, this, &ScratchPad::checkButtonClicked);
-}
+template<typename T, std::size_t N = DefaultSmallVectorSize>
+using SmallVector = std::vector<T, TaggedAllocator<T, N>>;
+#endif
 
-ScratchPad::~ScratchPad()
-{
-    delete mUI;
-}
-
-void ScratchPad::translate()
-{
-    mUI->retranslateUi(this);
-}
-
-void ScratchPad::checkButtonClicked()
-{
-    QString filename = mUI->lineEdit->text();
-    if (filename.isEmpty())
-        filename = "test.cpp";
-    mMainWindow.analyzeCode(mUI->plainTextEdit->toPlainText(), filename);
-}
+#endif
