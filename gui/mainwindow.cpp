@@ -414,7 +414,7 @@ void MainWindow::doAnalyzeProject(ImportProject p, const bool checkLibrary, cons
     mIsLogfileLoaded = false;
     if (mProjectFile) {
         std::vector<std::string> v;
-        foreach (const QString &i, mProjectFile->getExcludedPaths()) {
+        for (const QString &i : mProjectFile->getExcludedPaths()) {
             v.push_back(i.toStdString());
         }
         p.ignorePaths(v);
@@ -510,8 +510,6 @@ void MainWindow::doAnalyzeFiles(const QStringList &files, const bool checkLibrar
     Settings checkSettings = getCppcheckSettings();
     checkSettings.checkLibrary = checkLibrary;
     checkSettings.checkConfiguration = checkConfiguration;
-
-    checkSettings.loadCppcheckCfg(QCoreApplication::applicationFilePath().toStdString());
 
     if (mProjectFile)
         qDebug() << "Checking project file" << mProjectFile->getFilename();
@@ -737,8 +735,7 @@ void MainWindow::analyzeDirectory()
 
 void MainWindow::addIncludeDirs(const QStringList &includeDirs, Settings &result)
 {
-    QString dir;
-    foreach (dir, includeDirs) {
+    for (const QString& dir : includeDirs) {
         QString incdir;
         if (!QDir::isAbsolutePath(dir))
             incdir = mCurrentDirectory + "/";
@@ -858,15 +855,10 @@ Settings MainWindow::getCppcheckSettings()
     result.exename = QCoreApplication::applicationFilePath().toStdString();
 
     const bool std = tryLoadLibrary(&result.library, "std.cfg");
-    bool posix = true;
-    if (result.posix())
-        posix = tryLoadLibrary(&result.library, "posix.cfg");
-    bool windows = true;
-    if (result.isWindowsPlatform())
-        windows = tryLoadLibrary(&result.library, "windows.cfg");
+    if (!std)
+        QMessageBox::critical(this, tr("Error"), tr("Failed to load %1. Your Cppcheck installation is broken. You can use --data-dir=<directory> at the command line to specify where this file is located. Please note that --data-dir is supposed to be used by installation scripts and therefore the GUI does not start when it is used, all that happens is that the setting is configured.").arg("std.cfg"));
 
-    if (!std || !posix || !windows)
-        QMessageBox::critical(this, tr("Error"), tr("Failed to load %1. Your Cppcheck installation is broken. You can use --data-dir=<directory> at the command line to specify where this file is located. Please note that --data-dir is supposed to be used by installation scripts and therefore the GUI does not start when it is used, all that happens is that the setting is configured.").arg(!std ? "std.cfg" : !posix ? "posix.cfg" : "windows.cfg"));
+    result.loadCppcheckCfg();
 
     // If project file loaded, read settings from it
     if (mProjectFile) {
@@ -874,7 +866,7 @@ Settings MainWindow::getCppcheckSettings()
         addIncludeDirs(dirs, result);
 
         const QStringList defines = mProjectFile->getDefines();
-        foreach (QString define, defines) {
+        for (const QString& define : defines) {
             if (!result.userDefines.empty())
                 result.userDefines += ";";
             result.userDefines += define.toStdString();
@@ -890,17 +882,17 @@ Settings MainWindow::getCppcheckSettings()
             result.variableContracts[vc.first.toStdString()] = vc.second;
 
         const QStringList undefines = mProjectFile->getUndefines();
-        foreach (QString undefine, undefines)
-        result.userUndefs.insert(undefine.toStdString());
+        for (const QString& undefine : undefines)
+            result.userUndefs.insert(undefine.toStdString());
 
         const QStringList libraries = mProjectFile->getLibraries();
-        foreach (QString library, libraries) {
+        for (const QString& library : libraries) {
             result.libraries.emplace_back(library.toStdString());
             const QString filename = library + ".cfg";
             tryLoadLibrary(&result.library, filename);
         }
 
-        foreach (const Suppressions::Suppression &suppression, mProjectFile->getSuppressions()) {
+        for (const Suppressions::Suppression &suppression : mProjectFile->getSuppressions()) {
             result.nomsg.addSuppression(suppression);
         }
 
@@ -944,12 +936,12 @@ Settings MainWindow::getCppcheckSettings()
         result.safeChecks.externalFunctions = mProjectFile->safeChecks.externalFunctions;
         result.safeChecks.internalFunctions = mProjectFile->safeChecks.internalFunctions;
         result.safeChecks.externalVariables = mProjectFile->safeChecks.externalVariables;
-        foreach (QString s, mProjectFile->getCheckUnknownFunctionReturn())
-        result.checkUnknownFunctionReturn.insert(s.toStdString());
+        for (const QString& s : mProjectFile->getCheckUnknownFunctionReturn())
+            result.checkUnknownFunctionReturn.insert(s.toStdString());
 
         QString filesDir(getDataDir());
         const QString pythonCmd = mSettings->value(SETTINGS_PYTHON_PATH).toString();
-        foreach (QString addon, mProjectFile->getAddons()) {
+        for (const QString& addon : mProjectFile->getAddons()) {
             QString addonFilePath = ProjectFile::getAddonFilePath(filesDir, addon);
             if (addonFilePath.isEmpty())
                 continue;
@@ -1866,7 +1858,7 @@ void MainWindow::suppressIds(QStringList ids)
     ids.removeDuplicates();
 
     QList<Suppressions::Suppression> suppressions = mProjectFile->getSuppressions();
-    foreach (QString id, ids) {
+    for (const QString& id : ids) {
         // Remove all matching suppressions
         std::string id2 = id.toStdString();
         for (int i = 0; i < suppressions.size();) {
