@@ -6030,6 +6030,8 @@ private:
         ASSERT_EQUALS("aA1(new(bB2(new(,", testAst("a(new A(1)), b(new B(2))"));
         ASSERT_EQUALS("Fred10[new", testAst(";new Fred[10];"));
         ASSERT_EQUALS("adelete", testAst("void f() { delete a; }"));
+        ASSERT_EQUALS("Aa*A{new=", testAst("A* a = new A{};"));
+        ASSERT_EQUALS("Aa*A12,{new=", testAst("A* a = new A{ 1, 2 };"));
 
         // placement new
         ASSERT_EQUALS("X12,3,(new ab,c,", testAst("new (a,b,c) X(1,2,3);"));
@@ -6211,6 +6213,12 @@ private:
         ASSERT_EQUALS("decltypex( var1=", testAst("decltype(x) var = 1;"));
         ASSERT_EQUALS("a1bdecltypet((>2,(", testAst("a(1 > b(decltype(t)), 2);")); // #10271
         ASSERT_EQUALS("decltypex({01:?", testAst("decltype(x){} ? 0 : 1;"));
+
+        ASSERT_EQUALS("Tp* Tt* forctp.=;;( tp.", testAst("struct T { T* p; };\n" // #10874
+                                                         "void f(T * t) {\n"
+                                                         "    for (decltype(t->p) (c) = t->p; ;) {}\n"
+                                                         "}\n"));
+        ASSERT_EQUALS("x0=a, stdtie::a(x=", testAst("int x = 0, a; std::tie(a) = x;\n"));
     }
 
     void astunaryop() { // unary operators
