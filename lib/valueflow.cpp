@@ -253,12 +253,12 @@ const Token *parseCompareInt(const Token *tok, ValueFlow::Value &true_value, Val
                 value1.clear();
         }
         if (!value1.empty()) {
-            if (isSaturated(value1.front()))
+            if (isSaturated(value1.front()) || astIsFloat(tok->astOperand2(), /*unknown*/ false))
                 return nullptr;
             setConditionalValues(tok, true, value1.front(), true_value, false_value);
             return tok->astOperand2();
         } else if (!value2.empty()) {
-            if (isSaturated(value2.front()))
+            if (isSaturated(value2.front()) || astIsFloat(tok->astOperand1(), /*unknown*/ false))
                 return nullptr;
             setConditionalValues(tok, false, value2.front(), true_value, false_value);
             return tok->astOperand1();
@@ -5248,23 +5248,13 @@ static void valueFlowAfterAssign(TokenList *tokenlist, SymbolDatabase* symboldat
 {
     for (const Scope * scope : symboldatabase->functionScopes) {
         std::unordered_map<nonneg int, std::unordered_set<nonneg int>> backAssigns;
-        std::set<nonneg int> aliased;
         for (Token* tok = const_cast<Token*>(scope->bodyStart); tok != scope->bodyEnd; tok = tok->next()) {
-            // Alias
-            if (tok->isUnaryOp("&")) {
-                aliased.insert(tok->astOperand1()->exprId());
-                continue;
-            }
-
             // Assignment
             if ((tok->str() != "=" && !isVariableInit(tok)) || (tok->astParent()))
                 continue;
 
             // Lhs should be a variable
             if (!tok->astOperand1() || !tok->astOperand1()->exprId())
-                continue;
-            const nonneg int exprid = tok->astOperand1()->exprId();
-            if (aliased.find(exprid) != aliased.end())
                 continue;
             std::vector<const Variable*> vars = getLHSVariables(tok);
 
