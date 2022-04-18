@@ -229,13 +229,6 @@ bool CmdLineParser::parseFromArgs(int argc, const char* const argv[])
             else if (std::strncmp(argv[i],"--addon-python=", 15) == 0)
                 mSettings->addonPython.assign(argv[i]+15);
 
-            else if (std::strcmp(argv[i], "--bug-hunting") == 0)
-                mSettings->bugHunting = true;
-
-            // TODO: Rename or move this parameter?
-            else if (std::strncmp(argv[i], "--bug-hunting-check-function-max-time=", 38) == 0)
-                mSettings->bugHuntingCheckFunctionMaxTime = std::atoi(argv[i] + 38);
-
             // Check configuration
             else if (std::strcmp(argv[i], "--check-config") == 0)
                 mSettings->checkConfiguration = true;
@@ -277,10 +270,6 @@ bool CmdLineParser::parseFromArgs(int argc, const char* const argv[])
             else if (std::strcmp(argv[i], "--debug") == 0 ||
                      std::strcmp(argv[i], "--debug-normal") == 0)
                 mSettings->debugnormal = true;
-
-            // show bug hunting debug output
-            else if (std::strcmp(argv[i], "--debug-bug-hunting") == 0)
-                mSettings->debugBugHunting = true;
 
             // Flag used for various purposes during debugging
             else if (std::strcmp(argv[i], "--debug-simplified") == 0)
@@ -779,22 +768,19 @@ bool CmdLineParser::parseFromArgs(int argc, const char* const argv[])
             }
 
             // --std
-            else if (std::strcmp(argv[i], "--std=c89") == 0) {
-                mSettings->standards.c = Standards::C89;
-            } else if (std::strcmp(argv[i], "--std=c99") == 0) {
-                mSettings->standards.c = Standards::C99;
-            } else if (std::strcmp(argv[i], "--std=c11") == 0) {
-                mSettings->standards.c = Standards::C11;
-            } else if (std::strcmp(argv[i], "--std=c++03") == 0) {
-                mSettings->standards.cpp = Standards::CPP03;
-            } else if (std::strcmp(argv[i], "--std=c++11") == 0) {
-                mSettings->standards.cpp = Standards::CPP11;
-            } else if (std::strcmp(argv[i], "--std=c++14") == 0) {
-                mSettings->standards.cpp = Standards::CPP14;
-            } else if (std::strcmp(argv[i], "--std=c++17") == 0) {
-                mSettings->standards.cpp = Standards::CPP17;
-            } else if (std::strcmp(argv[i], "--std=c++20") == 0) {
-                mSettings->standards.cpp = Standards::CPP20;
+            else if (std::strncmp(argv[i], "--std=", 6) == 0) {
+                const std::string std = argv[i] + 6;
+                // TODO: print error when standard is unknown
+                if (std::strncmp(std.c_str(), "c++", 3) == 0) {
+                    mSettings->standards.cpp = Standards::getCPP(std);
+                }
+                else if (std::strncmp(std.c_str(), "c", 1) == 0) {
+                    mSettings->standards.c = Standards::getC(std);
+                }
+                else {
+                    printError("unknown --std value '" + std + "'");
+                    return false;
+                }
             }
 
             else if (std::strncmp(argv[i], "--suppress=", 11) == 0) {
@@ -1289,6 +1275,5 @@ void CmdLineParser::printHelp()
     " * tinyxml2 -- loading project/library/ctu files.\n"
     " * picojson -- loading compile database.\n"
     " * pcre -- rules.\n"
-    " * qt -- used in GUI\n"
-    " * z3 -- theorem prover from Microsoft Research used in bug hunting.\n";
+    " * qt -- used in GUI\n";
 }

@@ -1988,18 +1988,32 @@ void CheckClass::checkConst()
 
             // don't warn when returning non-const pointer/reference
             {
-                bool isPointerOrReference = false;
-                for (const Token *typeToken = func.retDef; typeToken; typeToken = typeToken->next()) {
-                    if (Token::Match(typeToken, "(|{|;"))
-                        break;
-                    if (!isPointerOrReference && typeToken->str() == "const")
-                        break;
-                    if (Token::Match(typeToken, "*|&")) {
-                        isPointerOrReference = true;
-                        break;
+                auto isPointerOrReference = [this](const Token* start, const Token* end) -> bool {
+                    bool inTemplArgList = false, isConstTemplArg = false;
+                    for (const Token* tok = start; tok != end; tok = tok->next()) {
+                        if (tok->str() == "{") // end of trailing return type
+                            return false;
+                        if (tok->str() == "<") {
+                            if (!tok->link())
+                                mSymbolDatabase->debugMessage(tok, "debug", "CheckClass::checkConst found unlinked template argument list '" + tok->expressionString() + "'.");
+                            inTemplArgList = true;
+                        }
+                        else if (tok->str() == ">") {
+                            inTemplArgList = false;
+                            isConstTemplArg = false;
+                        }
+                        else if (tok->str() == "const") {
+                            if (!inTemplArgList)
+                                return false;
+                            isConstTemplArg = true;
+                        }
+                        else if (!isConstTemplArg && Token::Match(tok, "*|&"))
+                            return true;
                     }
-                }
-                if (isPointerOrReference)
+                    return false;
+                };
+
+                if (isPointerOrReference(func.retDef, func.tokenDef))
                     continue;
             }
 
@@ -2207,8 +2221,12 @@ bool CheckClass::checkConstFunc(const Scope *scope, const Function *func, bool& 
             if (v && v->isMutable())
                 continue;
 
-            if (tok1->str() == "this" && tok1->previous()->isAssignmentOp())
-                return false;
+            if (tok1->str() == "this") {
+                if (tok1->previous()->isAssignmentOp())
+                    return false;
+                if (Token::Match(tok1->previous(), "( this . * %var% )")) // call using ptr to member function TODO: check constness
+                    return false;
+            }
 
             // non const pointer cast
             if (tok1->valueType() && tok1->valueType()->pointer > 0 && tok1->astParent() && tok1->astParent()->isCast() && !Token::simpleMatch(tok1->astParent(), "( const"))

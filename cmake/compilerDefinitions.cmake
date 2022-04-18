@@ -19,10 +19,6 @@ if (HAVE_RULES)
     add_definitions(-DHAVE_RULES -DTIXML_USE_STL)
 endif()
 
-if (USE_Z3)
-    add_definitions(-DUSE_Z3)
-endif()
-
 if (Boost_FOUND)
     add_definitions(-DHAVE_BOOST)
 endif()
@@ -33,6 +29,10 @@ endif()
 
 if (USE_THREADS)
     add_definitions(-DUSE_THREADS)
+endif()
+
+if (MSVC AND DISABLE_CRTDBG_MAP_ALLOC)
+    add_definitions(-DDISABLE_CRTDBG_MAP_ALLOC)
 endif()
 
 file(TO_CMAKE_PATH ${FILESDIR} _filesdir)
