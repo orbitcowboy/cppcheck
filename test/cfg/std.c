@@ -85,6 +85,26 @@ void bufferAccessOutOfBounds(void)
     free(pAlloc1);
 }
 
+wchar_t* nullPointer_fgetws(wchar_t* buffer, int n, FILE* stream)
+{
+    // cppcheck-suppress nullPointer
+    (void)fgetws(NULL,n,stream);
+    // cppcheck-suppress nullPointer
+    (void)fgetws(buffer,n,NULL);
+    // No warning is expected
+    return fgetws(buffer, n, stream);
+}
+
+char* nullPointer_fgets(char *buffer, int n, FILE *stream)
+{
+    // cppcheck-suppress nullPointer
+    (void)fgets(NULL,n,stream);
+    // cppcheck-suppress nullPointer
+    (void)fgets(buffer,n,NULL);
+    // No warning is expected
+    return fgets(buffer, n, stream);
+}
+
 void memleak_aligned_alloc(void)
 {
     // cppcheck-suppress unusedAllocatedMemory
@@ -2852,6 +2872,16 @@ void uninitvar_vwprintf(wchar_t *Format, va_list Arg)
     (void)vwprintf(Format,Arg);
     // cppcheck-suppress va_list_usedBeforeStarted
     (void)vwprintf(Format,arg);
+}
+
+void nullPointer_bsearch(void* key, void* base, size_t num, size_t size)
+{
+    // cppcheck-suppress nullPointer
+    (void)bsearch(NULL,base,num,size,(int (*)(const void*,const void*))strcmp);
+    // cppcheck-suppress nullPointer
+    (void)bsearch(key,NULL,num,size,(int (*)(const void*,const void*))strcmp);
+    // No warning is expected
+    (void)bsearch(key,base,num,size,(int (*)(const void*,const void*))strcmp);
 }
 
 void uninitvar_bsearch(void)

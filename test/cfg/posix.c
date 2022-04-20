@@ -7,6 +7,7 @@
 // No warnings about bad library configuration, unmatched suppressions, etc. exitcode=0
 //
 
+#include <aio.h>
 #include <stdlib.h>
 #include <stdio.h> // <- FILE
 #include <dirent.h>
@@ -26,8 +27,98 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <stdbool.h>
+#define _XOPEN_SOURCE
 #include <wchar.h>
 #include <string.h>
+
+int uninitvar_wcwidth(const wchar_t c)
+{
+    wchar_t wc;
+    // cppcheck-suppress uninitvar
+    (void)wcwidth(wc);
+    // No warning is expected
+    return wcwidth(c);
+}
+
+int nullPointer_wcsnlen(const wchar_t *s, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)wcsnlen(NULL, n);
+    // No warning is expected
+    return wcsnlen(s, n);
+}
+
+int nullPointer_gethostname(char *s, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)gethostname(NULL, n);
+    // No warning is expected
+    return gethostname(s, n);
+}
+
+int nullPointer_wcswidth(const wchar_t *s, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)wcswidth(NULL, n);
+    // No warning is expected
+    return wcswidth(s, n);
+}
+
+int nullPointer_aio_cancel(int fd, struct aiocb *aiocbp)
+{
+    // No warning is expected
+    (void)aio_cancel(fd, NULL);
+    // No warning is expected
+    return aio_cancel(fd, aiocbp);
+}
+
+int nullPointer_aio_fsync(int op, struct aiocb *aiocbp)
+{
+    // cppcheck-suppress nullPointer
+    (void)aio_fsync(op, NULL);
+    // No warning is expected
+    return aio_fsync(op, aiocbp);
+}
+
+ssize_t nullPointer_aio_return(struct aiocb *aiocbp)
+{
+    // cppcheck-suppress nullPointer
+    (void)aio_return(NULL);
+    // No warning is expected
+    return aio_return(aiocbp);
+}
+
+int nullPointer_aio_error(const struct aiocb *aiocbp)
+{
+    // cppcheck-suppress nullPointer
+    (void)aio_error(NULL);
+    // No warning is expected
+    return aio_error(aiocbp);
+}
+
+int nullPointer_aio_read(struct aiocb *aiocbp)
+{
+    // cppcheck-suppress nullPointer
+    (void)aio_read(NULL);
+    // No warning is expected
+    return aio_read(aiocbp);
+}
+
+int nullPointer_aio_write(struct aiocb *aiocbp)
+{
+    // cppcheck-suppress nullPointer
+    (void)aio_write(NULL);
+    // No warning is expected
+    return aio_write(aiocbp);
+}
+
+int nullPointer_aio_suspend(const struct aiocb *const aiocb_list[], int nitems, const struct timespec *restrict timeout)
+{
+    // cppcheck-suppress nullPointer
+    (void)aio_suspend(NULL, nitems, timeout);
+    // No warning is expected
+    return aio_suspend(aiocb_list, nitems, timeout);
+}
 
 // Note: Since glibc 2.28, this function symbol is no longer available to newly linked applications.
 void invalidFunctionArg_llseek(int fd, loff_t offset, int origin)
@@ -123,6 +214,59 @@ char * overlappingWriteFunction_stpcpy(char *src, char *dest)
     (void) stpcpy(dest, src);
     // cppcheck-suppress overlappingWriteFunction
     return stpcpy(src, src);
+}
+
+int nullPointer_strcasecmp(char *a, char *b)
+{
+    // No warning shall be shown:
+    (void) strcasecmp(a, b);
+    // cppcheck-suppress nullPointer
+    (void) strcasecmp(a, NULL);
+    // cppcheck-suppress nullPointer
+    return strcasecmp(NULL, b);
+}
+
+int nullPointer_strncasecmp(char *a, char *b, size_t n)
+{
+    // No warning shall be shown:
+    (void) strncasecmp(a, b, n);
+    // cppcheck-suppress nullPointer
+    (void) strncasecmp(a, NULL, n);
+    // cppcheck-suppress nullPointer
+    return strncasecmp(NULL, b, n);
+}
+
+int nullPointer_bcmp(const void *a, const void *b, size_t n)
+{
+    // No nullPointer warning shall be shown:
+    // cppcheck-suppress bcmpCalled
+    (void) bcmp(a, b, n);
+    // cppcheck-suppress nullPointer
+    // cppcheck-suppress bcmpCalled
+    (void) bcmp(a, NULL, n);
+    // cppcheck-suppress nullPointer
+    // cppcheck-suppress bcmpCalled
+    return bcmp(NULL, b, n);
+}
+
+char * nullPointer_stpcpy(char *src, char *dest)
+{
+    // No warning shall be shown:
+    (void) stpcpy(dest, src);
+    // cppcheck-suppress nullPointer
+    (void) stpcpy(dest, NULL);
+    // cppcheck-suppress nullPointer
+    return stpcpy(NULL, src);
+}
+
+char * nullPointer_strsep(char **stringptr, char *delim)
+{
+    // No warning shall be shown:
+    (void) strsep(stringptr, delim);
+    // cppcheck-suppress nullPointer
+    (void) strsep(stringptr, NULL);
+    // cppcheck-suppress nullPointer
+    return strsep(NULL, delim);
 }
 
 void overlappingWriteFunction_bcopy(char *buf, const size_t count)
