@@ -48,6 +48,15 @@ int nullPointer_wcsnlen(const wchar_t *s, size_t n)
     return wcsnlen(s, n);
 }
 
+size_t bufferAccessOutOfBounds_wcsnlen(void) // #10997
+{
+    wchar_t buf[2]={L'4',L'2'};
+    size_t len = wcsnlen(buf,2);
+    // TODO cppcheck-suppress bufferAccessOutOfBounds
+    len+=wcsnlen(buf,3);
+    return len;
+}
+
 int nullPointer_gethostname(char *s, size_t n)
 {
     // cppcheck-suppress nullPointer
@@ -249,6 +258,46 @@ int nullPointer_bcmp(const void *a, const void *b, size_t n)
     return bcmp(NULL, b, n);
 }
 
+void nullPointer_bzero(void *s, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    // cppcheck-suppress bzeroCalled
+    bzero(NULL,n);
+    // No nullPointer-warning shall be shown:
+    // cppcheck-suppress bzeroCalled
+    bzero(s,n);
+}
+
+void bufferAccessOutOfBounds_bzero(void *s, size_t n)
+{
+    char buf[42];
+    // cppcheck-suppress bufferAccessOutOfBounds
+    // cppcheck-suppress bzeroCalled
+    bzero(buf,43);
+    // cppcheck-suppress bzeroCalled
+    bzero(buf,42);
+    // No nullPointer-warning shall be shown:
+    // cppcheck-suppress bzeroCalled
+    bzero(s,n);
+}
+
+size_t bufferAccessOutOfBounds_strnlen(const char *s, size_t maxlen)
+{
+    char buf[2]={'4','2'};
+    size_t len = strnlen(buf,2);
+    // cppcheck-suppress bufferAccessOutOfBounds
+    len+=strnlen(buf,3);
+    return len;
+}
+
+size_t nullPointer_strnlen(const char *s, size_t maxlen)
+{
+    // No warning shall be shown:
+    (void) strnlen(s, maxlen);
+    // cppcheck-suppress nullPointer
+    return strnlen(NULL, maxlen);
+}
+
 char * nullPointer_stpcpy(char *src, char *dest)
 {
     // No warning shall be shown:
@@ -277,8 +326,20 @@ void overlappingWriteFunction_bcopy(char *buf, const size_t count)
     // cppcheck-suppress bcopyCalled
     bcopy(&buf[0], &buf[3], 3U);    // no-overlap
     // cppcheck-suppress bcopyCalled
-    // cppcheck-suppress overlappingWriteFunction
-    bcopy(&buf[0], &buf[3], 4U);
+    bcopy(&buf[0], &buf[3], 4U);    // The result is correct, even when both areas overlap.
+}
+
+void nullPointer_bcopy(const void *src, void *dest, size_t n)
+{
+    // No warning shall be shown:
+    // cppcheck-suppress bcopyCalled
+    bcopy(src, dest, n);
+    // cppcheck-suppress bcopyCalled
+    // cppcheck-suppress nullPointer
+    bcopy(NULL, dest, n);
+    // cppcheck-suppress bcopyCalled
+    // cppcheck-suppress nullPointer
+    bcopy(src, NULL, n);
 }
 
 void overlappingWriteFunction_memccpy(unsigned char *src, unsigned char *dest, int c, size_t count)
