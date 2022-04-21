@@ -1274,6 +1274,66 @@ wchar_t* nullPointer_fgetws(wchar_t* buffer, int n, FILE* stream)
     return std::fgetws(buffer, n, stream);
 }
 
+void nullPointer_wmemcmp(const wchar_t* s1, const wchar_t* s2, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::wmemcmp(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void)std::wmemcmp(s1,NULL,n);
+    (void)std::wmemcmp(s1,s2,n);
+}
+
+void nullPointer_strncat(char *d, char *s, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::strncat(NULL,s,n);
+    // cppcheck-suppress nullPointer
+    (void)std::strncat(d,NULL,n);
+    // no warning is expected for
+    (void)std::strncat(d,s,n);
+}
+
+void nullPointer_strcpy(char *dest, const char * const source)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::strcpy(NULL,source);
+    // cppcheck-suppress nullPointer
+    (void)std::strcpy(dest,NULL);
+
+    // no warning shall be shown for
+    (void)std::strcpy(dest,source);
+}
+
+void nullPointer_strcat(char *dest, const char * const source)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::strcat(NULL,source);
+    // cppcheck-suppress nullPointer
+    (void)std::strcat(dest,NULL);
+
+    // no warning shall be shown for
+    (void)std::strcat(dest,source);
+}
+
+void nullPointer_strncpy(char *d, const char *s, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::strncpy(NULL,s,n);
+    // cppcheck-suppress nullPointer
+    (void)std::strncpy(d,NULL,n);
+    // no warning is expected for
+    (void)std::strncpy(d,s,n);
+}
+
+void nullPointer_strncmp(const char *s1, const char *s2, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::strncmp(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void)std::strncmp(s1,NULL,n);
+    (void)std::strncmp(s1,s2,n);
+}
+
 char* nullPointer_fgets(char *buffer, int n, FILE *stream)
 {
     // cppcheck-suppress nullPointer
@@ -3535,12 +3595,6 @@ void nullPointer_memcmp(char *p)
 {
     // cppcheck-suppress nullPointer
     (void)std::memcmp(p, 0, 123);
-}
-
-void nullPointer_wmemcmp(wchar_t *p)
-{
-    // cppcheck-suppress nullPointer
-    (void)std::wmemcmp(p, 0, 123);
 }
 
 ///////////////////////////////////////////////////////////////////////

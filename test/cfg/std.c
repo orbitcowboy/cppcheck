@@ -414,12 +414,6 @@ void nullPointer_memcmp(char *p)
     (void)memcmp(p, 0, 123);
 }
 
-void nullPointer_wmemcmp(wchar_t *p)
-{
-    // cppcheck-suppress nullPointer
-    (void)wmemcmp(p, 0, 123);
-}
-
 void nullPointer_vsnprintf(const char * format, ...)
 {
     va_list args;
@@ -3119,6 +3113,28 @@ void uninitvar_strcat(char *dest, const char * const source)
     (void)strcat(dest,source);
 }
 
+void nullPointer_strcpy(char *dest, const char * const source)
+{
+    // cppcheck-suppress nullPointer
+    (void)strcpy(NULL,source);
+    // cppcheck-suppress nullPointer
+    (void)strcpy(dest,NULL);
+
+    // no warning shall be shown for
+    (void)strcpy(dest,source);
+}
+
+void nullPointer_strcat(char *dest, const char * const source)
+{
+    // cppcheck-suppress nullPointer
+    (void)strcat(NULL,source);
+    // cppcheck-suppress nullPointer
+    (void)strcat(dest,NULL);
+
+    // no warning shall be shown for
+    (void)strcat(dest,source);
+}
+
 void bufferAccessOutOfBounds_strcat(char *dest, const char * const source)
 {
     char buf4[4] = {0};
@@ -3256,6 +3272,15 @@ void uninitvar_wcschr(void)
     wchar_t c;
     // cppcheck-suppress uninitvar
     (void)wcschr(cs,c);
+}
+
+void nullPointer_strcmp(char *s1, char *s2)
+{
+    // cppcheck-suppress nullPointer
+    (void)strcmp(NULL,s2);
+    // cppcheck-suppress nullPointer
+    (void)strcmp(s1,NULL);
+    (void)strcmp(s1,s2);
 }
 
 void uninitvar_strcmp(char *s1, char *s2)
@@ -3446,6 +3471,26 @@ void uninitvar_strncat(char *d, char *s, size_t n)
     (void)strncat(d,s,n);
 }
 
+void nullPointer_strncat(char *d, char *s, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)strncat(NULL,s,n);
+    // cppcheck-suppress nullPointer
+    (void)strncat(d,NULL,n);
+    // no warning is expected for
+    (void)strncat(d,s,n);
+}
+
+void nullPointer_strncpy(char *d, const char *s, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)strncpy(NULL,s,n);
+    // cppcheck-suppress nullPointer
+    (void)strncpy(d,NULL,n);
+    // no warning is expected for
+    (void)strncpy(d,s,n);
+}
+
 // errno_t strcat_s(char *restrict dest, rsize_t destsz, const char *restrict src); // since C11
 void uninitvar_strcat_s(char *Ct, size_t N, char *S)
 {
@@ -3614,6 +3659,24 @@ void bufferAccessOutOfBounds_strncmp(void)
     (void)strncmp(dest,src,2);
     // cppcheck-suppress bufferAccessOutOfBounds
     (void)strncmp(dest,src,3);
+}
+
+void nullPointer_wmemcmp(const wchar_t* s1, const wchar_t* s2, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)wmemcmp(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void)wmemcmp(s1,NULL,n);
+    (void)wmemcmp(s1,s2,n);
+}
+
+void nullPointer_strncmp(const char *s1, const char *s2, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)strncmp(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void)strncmp(s1,NULL,n);
+    (void)strncmp(s1,s2,n);
 }
 
 void uninitvar_wcsxfrm(void)
