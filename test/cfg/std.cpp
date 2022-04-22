@@ -110,12 +110,36 @@ void overlappingWriteFunction_wcscat(wchar_t *src, wchar_t *dest)
     (void)wcscat(src, src);
 }
 
+void overlappingWriteFunction_wcsxfrm(wchar_t *s1, wchar_t *s2, size_t n)
+{
+    // No warning shall be shown:
+    (void)wcsxfrm(s1, s2, n);
+}
+
 char * overlappingWriteFunction_strcat(char *src, char *dest)
 {
     // No warning shall be shown:
     (void)strcat(dest, src);
     // cppcheck-suppress overlappingWriteFunction
     return strcat(src, src);
+}
+
+int nullPointer_wcsncmp(const wchar_t* s1, const wchar_t* s2, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void) std::wcsncmp(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void) std::wcsncmp(s1,NULL,n);
+    return std::wcsncmp(s1,s2,n);
+}
+
+wchar_t* nullPointer_wcsncpy(wchar_t *s, const wchar_t *cs, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void) std::wcsncpy(NULL,cs,n);
+    // cppcheck-suppress nullPointer
+    (void) std::wcsncpy(s,NULL,n);
+    return std::wcsncpy(s,cs,n);
 }
 
 char * overlappingWriteFunction_strncat(char *src, char *dest, const std::size_t count)
@@ -1281,6 +1305,16 @@ void nullPointer_wmemcmp(const wchar_t* s1, const wchar_t* s2, size_t n)
     // cppcheck-suppress nullPointer
     (void)std::wmemcmp(s1,NULL,n);
     (void)std::wmemcmp(s1,s2,n);
+}
+
+
+void nullPointer_memcmp(const void *s1, const void *s2, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::memcmp(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void)std::memcmp(s1,NULL,n);
+    (void)std::memcmp(s1,s2,n);
 }
 
 void nullPointer_strncat(char *d, char *s, size_t n)
@@ -3511,15 +3545,15 @@ void nullPointer_asctime(void)
     (void)std::asctime(0);
 }
 
-void nullPointer_wcsftime(size_t maxsize)
+void nullPointer_wcsftime(wchar_t* ptr, size_t maxsize, const wchar_t* format, const struct tm* timeptr)
 {
-    wchar_t* ptr = 0;
-    wchar_t* format = 0;
-    struct tm* timeptr = 0;
     // cppcheck-suppress nullPointer
-    (void)std::wcsftime(ptr,maxsize,format,timeptr);
+    (void)std::wcsftime(NULL, maxsize, format, timeptr);
     // cppcheck-suppress nullPointer
-    (void)std::wcsftime(0,maxsize,0,0);
+    (void)std::wcsftime(ptr, maxsize, NULL, timeptr);
+    // cppcheck-suppress nullPointer
+    (void)std::wcsftime(ptr, maxsize, format, NULL);
+    (void)std::wcsftime(ptr, maxsize, format, timeptr);
 }
 
 void nullPointer_fegetenv(void)
@@ -3591,10 +3625,38 @@ void nullPointer_atof(void)
     (void)std::atof(0);
 }
 
-void nullPointer_memcmp(char *p)
+void nullPointer_memcpy(void *s1, const void *s2, size_t n)
 {
     // cppcheck-suppress nullPointer
-    (void)std::memcmp(p, 0, 123);
+    (void)std::memcpy(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void)std::memcpy(s1,NULL,n);
+    (void)std::memcpy(s1,s2,n);
+}
+
+void nullPointer_memmove(void *s1, void *s2, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::memmove(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void)std::memmove(s1,NULL,n);
+    (void)std::memmove(s1,s2,n);
+}
+
+void nullPointer_wmemmove(wchar_t* s1, const wchar_t* s2, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::wmemmove(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void)std::wmemmove(s1,NULL,n);
+    (void)std::wmemmove(s1,s2,n);
+}
+
+void nullPointer_wmemset(wchar_t* s, wchar_t c, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)std::wmemset(NULL,c,n);
+    (void)std::wmemset(s,c,n);
 }
 
 ///////////////////////////////////////////////////////////////////////

@@ -31,6 +31,15 @@
 #include <wchar.h>
 #include <string.h>
 
+int nullPointer_wcsncasecmp(const wchar_t *s1, const wchar_t *s2, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)wcsncasecmp(NULL,s2,n);
+    // cppcheck-suppress nullPointer
+    (void)wcsncasecmp(s1,NULL,n);
+    return wcsncasecmp(s1,s2,n);
+}
+
 int uninitvar_wcwidth(const wchar_t c)
 {
     wchar_t wc;
@@ -215,6 +224,24 @@ void invalidFunctionArg_fseeko(FILE* stream, off_t offset, int origin)
     (void)fseeko(stream, offset, SEEK_SET);
     (void)fseeko(stream, offset, SEEK_CUR);
     (void)fseeko(stream, offset, SEEK_END);
+}
+
+wchar_t *nullPointer_wcpncpy(wchar_t *dest, const wchar_t *src, size_t n)
+{
+    // cppcheck-suppress nullPointer
+    (void)wcpncpy(NULL, src, n);
+    // cppcheck-suppress nullPointer
+    (void)wcpncpy(dest, NULL, n);
+    return wcpncpy(dest, src, n);
+}
+
+int nullPointer_utimes(const char *path, const struct timeval times[2])
+{
+    // cppcheck-suppress nullPointer
+    // cppcheck-suppress utimesCalled
+    (void)utimes(NULL, times);
+    // cppcheck-suppress utimesCalled
+    return utimes(path, times);
 }
 
 char * overlappingWriteFunction_stpcpy(char *src, char *dest)
