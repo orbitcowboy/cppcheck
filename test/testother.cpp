@@ -8797,6 +8797,12 @@ private:
                       "[test.cpp:4]: (style) Redundant pointer operation on 'value' - it's already a variable.\n",
                       errout.str());
 
+        check("void f(int& a, int b) {\n"
+              "    *(&a) = b;\n"
+              "}\n", nullptr, false, true);
+        ASSERT_EQUALS("[test.cpp:2]: (style) Redundant pointer operation on 'a' - it's already a variable.\n",
+                      errout.str());
+
         check("void f(int**& p) {}\n", nullptr, false, true);
         ASSERT_EQUALS("", errout.str());
 
