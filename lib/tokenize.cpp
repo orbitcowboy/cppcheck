@@ -6672,10 +6672,12 @@ bool Tokenizer::simplifyConditions()
                     result = (op1 == op2);
                 else if (cmp == "!=")
                     result = (op1 != op2);
-                else if (cmp == ">=" || cmp == "<=")
-                    result = true;
+                else if (cmp == ">=")
+                    result = (op1 || !op2);
                 else if (cmp == ">")
                     result = (op1 && !op2);
+                else if (cmp == "<=")
+                    result = (!op1 || op2);
                 else if (cmp == "<")
                     result = (!op1 && op2);
                 else
@@ -10823,7 +10825,7 @@ void Tokenizer::simplifyStructDecl()
             Token *restart = next;
 
             // check for named type
-            if (Token::Match(tok->next(), "const| *|&| const| (| %type% )| ,|;|[|=|(|{")) {
+            if (Token::Match(tok->next(), "const|static|volatile| *|&| const| (| %type% )| ,|;|[|=|(|{")) {
                 tok->insertToken(";");
                 tok = tok->next();
                 while (!Token::Match(start, "struct|class|union|enum")) {
@@ -10981,9 +10983,9 @@ void Tokenizer::simplifyAttribute()
                 syntaxError(tok);
 
             Token *functok = nullptr;
-            if (Token::Match(after, "%name%|*|(")) {
+            if (Token::Match(after, "%name%|*|&|(")) {
                 Token *ftok = after;
-                while (Token::Match(ftok, "%name%|::|<|* !!(")) {
+                while (Token::Match(ftok, "%name%|::|<|*|& !!(")) {
                     if (ftok->str() == "<") {
                         ftok = ftok->findClosingBracket();
                         if (!ftok)
